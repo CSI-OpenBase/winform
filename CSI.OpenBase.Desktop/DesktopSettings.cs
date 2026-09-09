@@ -17,6 +17,8 @@ internal sealed class DesktopSettings
 
     public string WorkspaceDirectory { get; set; } = DefaultWorkspaceDirectory();
 
+    internal bool HasPersistedWorkspace { get; private set; }
+
     public static DesktopSettings Load(AppLog log)
     {
         try
@@ -34,6 +36,7 @@ internal sealed class DesktopSettings
             }
 
             settings.WorkspaceDirectory = Path.GetFullPath(settings.WorkspaceDirectory);
+            settings.HasPersistedWorkspace = true;
             return settings;
         }
         catch (Exception exception)
@@ -51,6 +54,7 @@ internal sealed class DesktopSettings
         var temporaryPath = SettingsPath + ".tmp";
         File.WriteAllText(temporaryPath, JsonSerializer.Serialize(this, JsonOptions));
         File.Move(temporaryPath, SettingsPath, overwrite: true);
+        HasPersistedWorkspace = true;
     }
 
     private static string DefaultWorkspaceDirectory()

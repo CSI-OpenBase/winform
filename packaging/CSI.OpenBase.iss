@@ -1,7 +1,14 @@
 #define MyAppName "CSI OpenBase"
-#define MyAppVersion "0.1.0"
 #define MyAppPublisher "CSI OpenBase contributors"
 #define MyAppExeName "CSI.OpenBase.Desktop.exe"
+
+#ifndef MyAppVersion
+  #error MyAppVersion must be supplied by scripts\build_windows.ps1
+#endif
+
+#ifndef PortableSource
+  #error PortableSource must be supplied by scripts\build_windows.ps1
+#endif
 
 [Setup]
 AppId={{9B12412C-03A5-4E7B-98AC-5C7853392C54}
@@ -14,7 +21,6 @@ PrivilegesRequired=lowest
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-OutputDir=..\dist\installer
 OutputBaseFilename=CSI-OpenBase-Setup-{#MyAppVersion}-win-x64
 Compression=lzma2/max
 SolidCompression=yes
@@ -30,7 +36,7 @@ Name: "chinesesimp"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "..\dist\windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PortableSource}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\backend"

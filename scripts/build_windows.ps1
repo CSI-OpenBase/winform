@@ -8,13 +8,29 @@ param(
 
     [string]$BootstrapPython = "python",
     [string]$Configuration = "Release",
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+    [switch]$PlanOnly
 )
 
 $ErrorActionPreference = "Stop"
 $runtime = "win-x64"
 $winformRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$outputRoot = Join-Path $winformRoot "dist\windows"
+$versionFile = Join-Path $winformRoot "VERSION"
+if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) {
+    throw "Missing release version file: $versionFile"
+}
+$versionText = [System.IO.File]::ReadAllText($versionFile)
+$versionPattern = '\A(?<version>(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.[1-9][0-9])(?:\r?\n)?\z'
+if ($versionText -notmatch $versionPattern) {
+    throw "VERSION must contain exactly x.x.xx with a patch from 10 through 99"
+}
+$releaseVersion = $Matches["version"]
+$releasesRoot = Join-Path $winformRoot "Releases"
+$releaseDirectory = Join-Path $releasesRoot "winform.$releaseVersion"
+$outputRoot = Join-Path $releaseDirectory "portable"
+$installerOutput = Join-Path $releaseDirectory "installer"
+$portableArchive = Join-Path $releaseDirectory "CSI-OpenBase-$releaseVersion-win-x64-portable.zip"
+$portableChecksum = "$portableArchive.sha256"
 $backendDist = Join-Path $winformRoot "build\pyinstaller-dist"
 $backendWork = Join-Path $winformRoot "build\pyinstaller-work"
 $pythonEnvironment = Join-Path $winformRoot "build\python-env"
@@ -27,7 +43,18 @@ $desktopProject = Join-Path $winformRoot "CSI.OpenBase.Desktop\CSI.OpenBase.Desk
 $specPath = Join-Path $winformRoot "packaging\openbase_backend.spec"
 $buildRequirements = Join-Path $winformRoot "packaging\requirements-build.txt"
 $installerScript = Join-Path $winformRoot "packaging\CSI.OpenBase.iss"
-$installerOutput = Join-Path $winformRoot "dist\installer"
+
+if ($PlanOnly) {
+    [ordered]@{
+        version = $releaseVersion
+        releaseDirectory = $releaseDirectory
+        portableDirectory = $outputRoot
+        installerDirectory = $installerOutput
+        portableArchive = $portableArchive
+        portableChecksum = $portableChecksum
+    } | ConvertTo-Json
+    return
+}
 
 function Assert-SafeProjectPath {
     param([Parameter(Mandatory = $true)][string]$Candidate)
@@ -50,6 +77,14 @@ function Assert-SafeProjectPath {
         }
     }
     return $fullPath
+}
+
+$installerCompiler = $null
+if (-not $SkipInstaller) {
+    $installerCompiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if (-not $installerCompiler) {
+        throw "ISCC.exe was not found. Install Inno Setup or pass -SkipInstaller for a portable-only build."
+    }
 }
 
 if ($PSCmdlet.ParameterSetName -eq "Wheel") {
@@ -79,12 +114,11 @@ if (-not $bootstrapExecutable) {
 }
 
 $cleanPaths = @(
-    $outputRoot,
+    $releaseDirectory,
     $backendDist,
     $backendWork,
     $pythonEnvironment,
-    $playwrightBundle,
-    $installerOutput
+    $playwrightBundle
 )
 foreach ($path in $cleanPaths) {
     $fullPath = Assert-SafeProjectPath -Candidate $path
@@ -185,6 +219,19 @@ if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
     -o $outputRoot
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 
+$desktopExecutable = Join-Path $outputRoot "CSI.OpenBase.Desktop.exe"
+if (-not (Test-Path -LiteralPath $desktopExecutable -PathType Leaf)) {
+    throw "dotnet publish did not create the desktop executable: $desktopExecutable"
+}
+$desktopFileVersion = (Get-Item -LiteralPath $desktopExecutable).VersionInfo.FileVersion
+if ($desktopFileVersion -ne "$releaseVersion.0") {
+    throw "Desktop file version $desktopFileVersion does not match VERSION $releaseVersion"
+}
+$desktopProductVersion = (Get-Item -LiteralPath $desktopExecutable).VersionInfo.ProductVersion
+if ($desktopProductVersion -ne $releaseVersion) {
+    throw "Desktop product version $desktopProductVersion does not match VERSION $releaseVersion"
+}
+
 $backendOutput = Join-Path $backendDist "CSI.OpenBase.Backend"
 if (-not (Test-Path -LiteralPath $backendOutput -PathType Container)) {
     throw "PyInstaller did not create the expected backend directory: $backendOutput"
@@ -203,6 +250,7 @@ foreach ($legalFileName in @("LICENSE", "NOTICE", "THIRD-PARTY-NOTICES.md")) {
     }
     Copy-Item -LiteralPath $legalFile -Destination $outputRoot
 }
+Copy-Item -LiteralPath $versionFile -Destination $outputRoot
 
 $distributionLicenses = Join-Path $outputRoot "licenses"
 New-Item -ItemType Directory -Path $distributionLicenses -Force | Out-Null
@@ -266,12 +314,27 @@ $backendLicenseDirectory = Join-Path $distributionLicenses "backend"
     --include-package PyInstaller
 if ($LASTEXITCODE -ne 0) { throw "Python dependency license collection failed" }
 
-$installerCompiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-if (-not $SkipInstaller -and $installerCompiler) {
-    & $installerCompiler.Source $installerScript
+Compress-Archive -Path (Join-Path $outputRoot "*") -DestinationPath $portableArchive -CompressionLevel Optimal
+$sha256 = (Get-FileHash -LiteralPath $portableArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumLine = "$sha256  $(Split-Path -Leaf $portableArchive)`r`n"
+[System.IO.File]::WriteAllText(
+    $portableChecksum,
+    $checksumLine,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+if (-not $SkipInstaller) {
+    New-Item -ItemType Directory -Path $installerOutput -Force | Out-Null
+    & $installerCompiler.Source `
+        "--define=MyAppVersion=$releaseVersion" `
+        "--define=PortableSource=$outputRoot" `
+        "--output-dir=$installerOutput" `
+        "--output-filename=CSI-OpenBase-Setup-$releaseVersion-win-x64" `
+        $installerScript
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
-} elseif (-not $SkipInstaller) {
-    throw "ISCC.exe was not found. Install Inno Setup or pass -SkipInstaller for a portable-only build."
 }
 
-Write-Host "Windows build ready: $outputRoot"
+Write-Host "Windows release ready: $releaseDirectory"
+Write-Host "Portable directory: $outputRoot"
+Write-Host "Portable archive: $portableArchive"
+Write-Host "SHA-256: $sha256"

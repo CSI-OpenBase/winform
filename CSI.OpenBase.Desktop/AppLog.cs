@@ -25,7 +25,10 @@ internal sealed class AppLog : IDisposable
         Directory.CreateDirectory(logDirectory);
         var path = Path.Combine(logDirectory, $"desktop-{DateTime.Now:yyyyMMdd-HHmmss}.log");
         var log = new AppLog(path);
-        log.Write("desktop", $"CSI OpenBase desktop starting ({Environment.Version}, {Environment.OSVersion})");
+        var applicationVersion = typeof(AppLog).Assembly.GetName().Version?.ToString(3) ?? "unknown";
+        log.Write(
+            "desktop",
+            $"CSI OpenBase desktop {applicationVersion} starting (.NET {Environment.Version}, {Environment.OSVersion})");
         return log;
     }
 

@@ -103,11 +103,14 @@ internal sealed class MainForm : Form
             Anchor = AnchorStyles.Left | AnchorStyles.Right,
             BackColor = Color.White,
             ReadOnly = true,
-            Text = _settings.WorkspaceDirectory,
+            Text = _settings.HasPersistedWorkspace ? _settings.WorkspaceDirectory : "尚未设置",
         };
         _browseButton = CreateButton("选择目录", 82);
         _browseButton.Margin = new Padding(10, 3, 0, 3);
-        _browseButton.Click += async (_, _) => await SelectWorkspaceAsync();
+        _browseButton.Click += async (_, _) =>
+        {
+            await SelectWorkspaceAsync();
+        };
         workspaceRow.Controls.Add(workspaceLabel, 0, 0);
         workspaceRow.Controls.Add(_workspaceTextBox, 1, 0);
         workspaceRow.Controls.Add(_browseButton, 2, 0);
@@ -172,6 +175,7 @@ internal sealed class MainForm : Form
             }
         };
         _backendMonitor.Start();
+        _restartButton.Enabled = _settings.HasPersistedWorkspace;
 
         Shown += async (_, _) => await InitializeAndStartAsync();
     }
@@ -232,6 +236,12 @@ internal sealed class MainForm : Form
 
     private async Task InitializeAndStartAsync()
     {
+        if (!_settings.HasPersistedWorkspace)
+        {
+            SetStatus("首次使用，请先选择工作目录。", isBusy: false);
+            await SelectWorkspaceAsync(restartBackend: false);
+        }
+
         try
         {
             SetStatus("正在初始化网页组件...", isBusy: true);
@@ -259,6 +269,15 @@ internal sealed class MainForm : Form
                 "无法初始化 WebView2。请安装或修复 Microsoft Edge WebView2 Runtime，然后重新启动。",
                 isBusy: false,
                 isError: true);
+            return;
+        }
+
+        if (!_settings.HasPersistedWorkspace)
+        {
+            SetControlsEnabled(true);
+            SetStatus(
+                "尚未设置工作目录。请选择目录后再启动本地服务。",
+                isBusy: false);
             return;
         }
 
@@ -316,6 +335,15 @@ internal sealed class MainForm : Form
     {
         if (!_webViewReady || _applicationCancellation.IsCancellationRequested)
         {
+            return;
+        }
+
+        if (!_settings.HasPersistedWorkspace)
+        {
+            SetControlsEnabled(true);
+            SetStatus(
+                "尚未设置工作目录。请选择目录后再启动本地服务。",
+                isBusy: false);
             return;
         }
 
@@ -385,19 +413,32 @@ internal sealed class MainForm : Form
         }
     }
 
-    private async Task SelectWorkspaceAsync()
+    private async Task<bool> SelectWorkspaceAsync(bool restartBackend = true)
     {
+        var requiresInitialSetup = !_settings.HasPersistedWorkspace;
+        var initialDirectory = Directory.Exists(_settings.WorkspaceDirectory)
+            ? _settings.WorkspaceDirectory
+            : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         using var dialog = new FolderBrowserDialog
         {
-            Description = "选择 CSI OpenBase 工作目录",
-            InitialDirectory = _settings.WorkspaceDirectory,
+            Description = requiresInitialSetup
+                ? "首次使用：选择保存用户数据的工作目录"
+                : "选择 CSI OpenBase 工作目录",
+            InitialDirectory = initialDirectory,
             ShowNewFolderButton = true,
             UseDescriptionForTitle = true,
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
-            return;
+            if (requiresInitialSetup)
+            {
+                SetStatus(
+                    "尚未设置工作目录。请选择目录后再启动本地服务。",
+                    isBusy: false);
+            }
+
+            return false;
         }
 
         try
@@ -412,12 +453,18 @@ internal sealed class MainForm : Form
             _settings.Save();
             _workspaceTextBox.Text = selectedPath;
             _log.Write("desktop", $"Data home changed to {selectedPath}");
-            await RestartBackendAsync();
+            if (restartBackend)
+            {
+                await RestartBackendAsync();
+            }
+
+            return true;
         }
         catch (Exception exception)
         {
             _log.Write("desktop", $"Workspace selection failed: {exception}");
             SetStatus($"无法使用所选目录：{exception.Message}", isBusy: false, isError: true);
+            return false;
         }
     }
 
@@ -446,7 +493,7 @@ internal sealed class MainForm : Form
         }
 
         _browseButton.Enabled = enabled;
-        _restartButton.Enabled = enabled;
+        _restartButton.Enabled = enabled && _settings.HasPersistedWorkspace;
     }
 
     private void SetStatus(string message, bool isBusy, bool isError = false)

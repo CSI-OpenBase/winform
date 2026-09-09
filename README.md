@@ -12,6 +12,14 @@ SSH clone: `git@github.com:CSI-OpenBase/winform.git`
 The Python backend is maintained separately in
 [CSI-OpenBase/local-web](https://github.com/CSI-OpenBase/local-web).
 
+## First Run
+
+On first launch, the desktop host requires the user to choose a work directory
+before it starts the local backend. Exported tables, video archives, comment
+data, and the local index are stored there. The selected path is persisted for
+later launches and can be changed from the main window. Cancelling the initial
+picker leaves the backend stopped until a directory is selected.
+
 ## Development
 
 Requirements:
@@ -46,6 +54,23 @@ dotnet run --project .\CSI.OpenBase.Desktop\CSI.OpenBase.Desktop.csproj
 The configured interpreter is launched as `python -m scripts.run_openbase`.
 `CSI_OPENBASE_BACKEND` can instead point directly to a frozen backend executable;
 this explicit override takes precedence over packaged and source backends.
+
+## Versioning
+
+The root `VERSION` file is the only source for the desktop application and release
+version. Versions use `x.x.xx`; the patch component runs from `10` through `99`.
+The initial version is `0.0.10`, and a rollover such as `1.1.99` produces
+`1.2.10`.
+
+Preview or apply the next version with:
+
+```powershell
+.\scripts\bump_version.ps1
+.\scripts\bump_version.ps1 -Apply
+```
+
+The build script reads this value for the executable metadata, installer, and
+release directory. Use `-PlanOnly` to inspect all output paths without building.
 
 ## Backend Contract
 
@@ -95,7 +120,7 @@ Or build from a release wheel without any Python source tree:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 `
-  -PythonWheel C:\artifacts\csi_openbase-0.1.0-py3-none-any.whl -SkipInstaller
+  -PythonWheel C:\artifacts\csi_openbase-<backend-version>-py3-none-any.whl -SkipInstaller
 ```
 
 `-PythonSource` and `-PythonWheel` are mutually exclusive. The build installs the
@@ -108,16 +133,22 @@ dependency closure because its bootloader and runtime enter the distribution.
 
 Artifacts are project-local:
 
-- `dist/windows/` is the complete portable directory.
-- `dist/windows/backend/` contains the isolated frozen Python runtime.
-- `dist/installer/` contains the Inno Setup installer.
+- `Releases/winform.<version>/portable/` is the complete portable directory.
+- `Releases/winform.<version>/portable/backend/` contains the frozen Python runtime.
+- `Releases/winform.<version>/CSI-OpenBase-<version>-win-x64-portable.zip` is the
+  distributable archive; the adjacent `.sha256` file verifies it.
+- `Releases/winform.<version>/installer/` contains the Inno Setup installer when
+  it is enabled.
+
+Each build recreates only the directory for the current version and preserves
+other version directories under `Releases/`.
 
 Omit `-SkipInstaller` only on a machine with Inno Setup's `ISCC.exe` on `PATH`.
 A missing compiler is a build failure so automation cannot mistake a portable-only
-output for an installer. Portable-only builds remove any stale `dist/installer/`
-output before starting. The installed Python package's own legal files are copied
-from its distribution metadata to `dist/windows/licenses/backend/`. Sign the desktop executable, frozen backend, and installer
-before public distribution.
+output for an installer. The installed Python package's own legal files are copied
+from its distribution metadata to the portable directory's `licenses/backend/`.
+Sign the desktop executable, frozen backend, and installer before public
+distribution.
 
 ## Host-Only Publish
 
