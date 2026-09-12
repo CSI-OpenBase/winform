@@ -26,6 +26,7 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
+SetupIconFile=..\CSI.OpenBase.Desktop\Assets\CSI.OpenBase.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ChangesAssociations=no
 CloseApplications=force

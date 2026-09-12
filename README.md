@@ -1,5 +1,9 @@
 # CSI OpenBase WinForms
 
+<p align="center">
+  <img src=".github/assets/csi-openbase-logo.svg" alt="CSI OpenBase" width="420">
+</p>
+
 This project is the Windows Forms and WebView2 host for CSI OpenBase. It owns the
 Windows UI, desktop settings, backend process lifetime, portable distribution, and
 installer. Creator authorization, collection, archiving, and the local web UI are

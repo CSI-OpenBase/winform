@@ -9,6 +9,7 @@
     <RootNamespace>CSI.OpenBase.Desktop</RootNamespace>
     <AssemblyName>CSI.OpenBase.Desktop</AssemblyName>
     <ApplicationTitle>CSI OpenBase</ApplicationTitle>
+    <ApplicationIcon>Assets\CSI.OpenBase.ico</ApplicationIcon>
     <Product>CSI OpenBase</Product>
     <Description>Desktop host for CSI OpenBase</Description>
     <VersionFile>$(MSBuildProjectDirectory)\..\VERSION</VersionFile>
