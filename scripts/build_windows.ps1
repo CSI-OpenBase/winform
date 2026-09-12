@@ -25,7 +25,7 @@ if ($versionText -notmatch $versionPattern) {
     throw "VERSION must contain exactly x.x.xx with a patch from 10 through 99"
 }
 $releaseVersion = $Matches["version"]
-$releasesRoot = Join-Path $winformRoot "Releases"
+$releasesRoot = Join-Path $winformRoot "Release"
 $releaseDirectory = Join-Path $releasesRoot "winform.$releaseVersion"
 $outputRoot = Join-Path $releaseDirectory "portable"
 $installerOutput = Join-Path $releaseDirectory "installer"

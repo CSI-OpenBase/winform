@@ -11,6 +11,12 @@ SETTINGS_SOURCE = (
 MAIN_FORM_SOURCE = (
     PROJECT_ROOT / "CSI.OpenBase.Desktop" / "MainForm.cs"
 ).read_text(encoding="utf-8")
+TASK_PANEL_SOURCE = (
+    PROJECT_ROOT / "CSI.OpenBase.Desktop" / "TaskPanelControl.cs"
+).read_text(encoding="utf-8")
+PROJECT_SOURCE = (
+    PROJECT_ROOT / "CSI.OpenBase.Desktop" / "CSI.OpenBase.Desktop.csproj"
+).read_text(encoding="utf-8")
 
 
 class FirstRunWorkspaceContractTests(unittest.TestCase):
@@ -69,6 +75,57 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
             backend_start_index,
         )
         self.assertNotIn("var workspaceConfigured", MAIN_FORM_SOURCE)
+
+    def test_task_panel_mirrors_the_authenticated_local_page(self) -> None:
+        self.assertIn(
+            "AddScriptToExecuteOnDocumentCreatedAsync",
+            MAIN_FORM_SOURCE,
+        )
+        self.assertIn(
+            "document.querySelector('.history-band tbody')",
+            MAIN_FORM_SOURCE,
+        )
+        self.assertIn("WebMessageReceived", MAIN_FORM_SOURCE)
+        self.assertIn("state.jobs.slice(0, 100)", MAIN_FORM_SOURCE)
+        self.assertIn("message: clean(job.message, 500)", MAIN_FORM_SOURCE)
+        self.assertIn("IsCurrentBackendSource(eventArgs.Source)", MAIN_FORM_SOURCE)
+        self.assertNotIn('new Uri(address, "api/state")', MAIN_FORM_SOURCE)
+
+    def test_task_panel_does_not_reload_or_poll_independently(self) -> None:
+        self.assertNotIn("CoreWebView2.Reload()", MAIN_FORM_SOURCE)
+        self.assertNotIn("__csiDesktopRefreshTasks", MAIN_FORM_SOURCE)
+        self.assertNotIn("originalFetch('/api/state'", MAIN_FORM_SOURCE)
+        self.assertNotIn("RefreshRequested", TASK_PANEL_SOURCE)
+
+    def test_task_panel_supports_per_monitor_dpi_and_keyboard_navigation(self) -> None:
+        self.assertIn(
+            "<ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>",
+            PROJECT_SOURCE,
+        )
+        self.assertIn("AutoScaleMode = AutoScaleMode.Dpi", MAIN_FORM_SOURCE)
+        self.assertIn("SetStyle(ControlStyles.Selectable, true)", TASK_PANEL_SOURCE)
+        self.assertIn("protected override bool IsInputKey", TASK_PANEL_SOURCE)
+        self.assertIn("OnDpiChangedAfterParent", TASK_PANEL_SOURCE)
+
+    def test_task_panel_follows_backend_connection_lifecycle(self) -> None:
+        prepare_index = MAIN_FORM_SOURCE.index("PrepareTaskPanelForConnection();")
+        start_index = MAIN_FORM_SOURCE.index("await _backend.StartAsync(", prepare_index)
+        navigation_index = MAIN_FORM_SOURCE.index("_webView.Source = address;", start_index)
+        self.assertLess(prepare_index, start_index)
+        self.assertLess(start_index, navigation_index)
+        self.assertIn('ResetTaskPanel("本地服务已断开");', MAIN_FORM_SOURCE)
+        self.assertIn('ResetTaskPanel("应用正在关闭");', MAIN_FORM_SOURCE)
+
+    def test_task_panel_has_loading_empty_error_and_disconnected_states(self) -> None:
+        for state_method in (
+            "ShowLoading",
+            "ShowDisconnected",
+            "ShowError",
+            "SetState",
+        ):
+            with self.subTest(state_method=state_method):
+                self.assertIn(f"void {state_method}", TASK_PANEL_SOURCE)
+        self.assertIn('SetPlaceholder("暂无任务记录")', TASK_PANEL_SOURCE)
 
 
 if __name__ == "__main__":

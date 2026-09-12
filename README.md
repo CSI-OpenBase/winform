@@ -24,6 +24,12 @@ data, and the local index are stored there. The selected path is persisted for
 later launches and can be changed from the main window. Cancelling the initial
 picker leaves the backend stopped until a directory is selected.
 
+The Windows shell includes a collapsible task panel beside the local web UI. It
+shows the current workspace's active count and recent task status already
+presented by the authenticated local page and follows the page's live task
+updates. The panel is read-only; task creation and execution remain owned by
+the Python backend and local web UI.
+
 ## Development
 
 Requirements:
@@ -90,6 +96,11 @@ The host chooses an available loopback port and sets `CSI_OPENBASE_HOME`,
 process. It requires an authenticated `/health` response for the same process
 instance before navigating WebView2.
 
+While connected, the native task panel mirrors the task records rendered by the
+authenticated local page. It does not add another task API polling loop. A backend
+restart or workspace change invalidates any in-flight task refresh before the new
+page state is shown.
+
 On exit, the host first posts the token to `/api/shutdown`. If the endpoint or
 process does not respond in time, it terminates the complete backend process tree.
 User settings, logs, WebView2 state, and isolated creator browser sessions are kept
@@ -137,15 +148,15 @@ dependency closure because its bootloader and runtime enter the distribution.
 
 Artifacts are project-local:
 
-- `Releases/winform.<version>/portable/` is the complete portable directory.
-- `Releases/winform.<version>/portable/backend/` contains the frozen Python runtime.
-- `Releases/winform.<version>/CSI-OpenBase-<version>-win-x64-portable.zip` is the
+- `Release/winform.<version>/portable/` is the complete portable directory.
+- `Release/winform.<version>/portable/backend/` contains the frozen Python runtime.
+- `Release/winform.<version>/CSI-OpenBase-<version>-win-x64-portable.zip` is the
   distributable archive; the adjacent `.sha256` file verifies it.
-- `Releases/winform.<version>/installer/` contains the Inno Setup installer when
+- `Release/winform.<version>/installer/` contains the Inno Setup installer when
   it is enabled.
 
 Each build recreates only the directory for the current version and preserves
-other version directories under `Releases/`.
+other version directories under `Release/`.
 
 Omit `-SkipInstaller` only on a machine with Inno Setup's `ISCC.exe` on `PATH`.
 A missing compiler is a build failure so automation cannot mistake a portable-only

@@ -15,9 +15,9 @@ to the `csi-openbase` Python package from
 - Keep all bundled legal files and dependency reports in release artifacts.
 - Treat the root `VERSION` file as the only application and release version source.
   Versions use `x.x.xx`, start at `0.0.10`, and roll `1.1.99` to `1.2.10`.
-- Complete builds belong under `Releases/winform.<version>/`; rebuilds may replace
+- Complete builds belong under `Release/winform.<version>/`; rebuilds may replace
   only that version directory and must preserve other release directories.
-- Do not commit `build/`, `dist/`, `Releases/`, `bin/`, `obj/`, user data, or
+- Do not commit `build/`, `dist/`, `Release/`, `bin/`, `obj/`, user data, or
   browser profiles.
 
 Verify changes with:

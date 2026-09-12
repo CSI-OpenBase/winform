@@ -4,4 +4,4 @@
 *.py[cod]
 /build/
 /dist/
-/Releases/
+/Release/

@@ -66,7 +66,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         plan = json.loads(result.stdout)
         version = current_version()
-        release_directory = ROOT / "Releases" / f"winform.{version}"
+        release_directory = ROOT / "Release" / f"winform.{version}"
         archive_name = f"CSI-OpenBase-{version}-win-x64-portable.zip"
         self.assertEqual(plan["version"], version)
         self.assertEqual(Path(plan["releaseDirectory"]), release_directory)
