@@ -54,7 +54,11 @@ internal sealed class MainForm : Form
               // The native host may already be shutting down.
             }
           };
-          const publishState = (state) => publish({ type: 'task-state', state: project(state) });
+          const publishState = (state) => {
+            const projected = project(state);
+            window.__csiDesktopTaskState = projected;
+            publish({ type: 'task-state', state: projected });
+          };
           const originalFetch = window.fetch.bind(window);
 
           window.fetch = async (...args) => {
@@ -86,6 +90,7 @@ internal sealed class MainForm : Form
         """;
     private const string TaskDocumentStateScript = """
         (() => {
+          if (window.__csiDesktopTaskState) return window.__csiDesktopTaskState;
           const root = document.querySelector('.history-band tbody');
           if (!root) return null;
           const kindByLabel = {
@@ -783,7 +788,7 @@ internal sealed class MainForm : Form
 
             if (string.Equals(json, "null", StringComparison.Ordinal))
             {
-                throw new InvalidDataException("当前页面未包含任务列表。");
+                return;
             }
 
             ApplyTaskState(BackendTaskState.Parse(json));

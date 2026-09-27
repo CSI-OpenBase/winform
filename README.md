@@ -33,6 +33,10 @@ show the local management interface embedded in the WinForms application.
 
 ![Video archive, comment counts, and incremental export actions](.github/assets/screenshots/video-archive.png)
 
+### Task History
+
+![Task history on its dedicated page](.github/assets/screenshots/task-history.png)
+
 ### Data Management
 
 ![Clear platform exports, comments, or all local data by scope](.github/assets/screenshots/clear-data-dialog.png)

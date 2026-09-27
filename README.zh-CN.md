@@ -31,6 +31,10 @@ Python 后端单独维护在
 
 ![视频档案、评论数量和增量导出操作](.github/assets/screenshots/video-archive.png)
 
+### 任务记录
+
+![独立页面中的任务记录](.github/assets/screenshots/task-history.png)
+
 ### 数据管理
 
 ![按范围清理平台导出、评论或全部本地数据](.github/assets/screenshots/clear-data-dialog.png)

@@ -105,6 +105,11 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
         self.assertIn("WebMessageReceived", MAIN_FORM_SOURCE)
         self.assertIn("state.jobs.slice(0, 100)", MAIN_FORM_SOURCE)
         self.assertIn("message: clean(job.message, 500)", MAIN_FORM_SOURCE)
+        self.assertIn("window.__csiDesktopTaskState = projected", MAIN_FORM_SOURCE)
+        self.assertIn(
+            "if (window.__csiDesktopTaskState) return window.__csiDesktopTaskState",
+            MAIN_FORM_SOURCE,
+        )
         self.assertIn("IsCurrentBackendSource(eventArgs.Source)", MAIN_FORM_SOURCE)
         self.assertNotIn('new Uri(address, "api/state")', MAIN_FORM_SOURCE)
 
