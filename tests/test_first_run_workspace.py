@@ -14,6 +14,12 @@ MAIN_FORM_SOURCE = (
 TASK_PANEL_SOURCE = (
     PROJECT_ROOT / "CSI.OpenBase.Desktop" / "TaskPanelControl.cs"
 ).read_text(encoding="utf-8")
+APP_LOG_SOURCE = (
+    PROJECT_ROOT / "CSI.OpenBase.Desktop" / "AppLog.cs"
+).read_text(encoding="utf-8")
+BEIJING_TIME_SOURCE = (
+    PROJECT_ROOT / "CSI.OpenBase.Desktop" / "BeijingTime.cs"
+).read_text(encoding="utf-8")
 PROJECT_SOURCE = (
     PROJECT_ROOT / "CSI.OpenBase.Desktop" / "CSI.OpenBase.Desktop.csproj"
 ).read_text(encoding="utf-8")
@@ -132,6 +138,14 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
             with self.subTest(state_method=state_method):
                 self.assertIn(f"void {state_method}", TASK_PANEL_SOURCE)
         self.assertIn('SetPlaceholder("暂无任务记录")', TASK_PANEL_SOURCE)
+
+    def test_desktop_times_are_fixed_to_beijing_instead_of_system_local_time(self) -> None:
+        self.assertIn("TimeSpan.FromHours(8)", BEIJING_TIME_SOURCE)
+        self.assertIn("DateTimeOffset.UtcNow.ToOffset(Offset)", BEIJING_TIME_SOURCE)
+        self.assertIn("BeijingTime.Now", TASK_PANEL_SOURCE)
+        self.assertIn("BeijingTime.Convert(parsed)", TASK_PANEL_SOURCE)
+        self.assertNotIn("ToLocalTime()", TASK_PANEL_SOURCE)
+        self.assertGreaterEqual(APP_LOG_SOURCE.count("BeijingTime.Now"), 2)
 
 
 if __name__ == "__main__":

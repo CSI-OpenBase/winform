@@ -201,7 +201,7 @@ internal sealed class TaskPanelControl : UserControl
             ? $"{state.ActiveTaskCount} 个进行中 · {state.Tasks.Count} 条记录"
             : $"无进行中任务 · {state.Tasks.Count} 条记录";
         SetPanelStatus(summary, "任务列表已更新");
-        _updatedLabel.Text = $"更新于 {DateTime.Now:HH:mm:ss}";
+        _updatedLabel.Text = $"更新于 {BeijingTime.Now:HH:mm:ss}";
 
         var fingerprint = BuildFingerprint(state);
         if (string.Equals(_taskFingerprint, fingerprint, StringComparison.Ordinal))
@@ -805,7 +805,7 @@ internal sealed class TaskPanelControl : UserControl
                 DateTimeStyles.AssumeUniversal,
                 out var parsed))
             {
-                return parsed.ToLocalTime().ToString("MM-dd HH:mm", CultureInfo.CurrentCulture);
+                return BeijingTime.Convert(parsed).ToString("MM-dd HH:mm", CultureInfo.CurrentCulture);
             }
 
             return string.IsNullOrWhiteSpace(rawTime) ? "时间未知" : rawTime;

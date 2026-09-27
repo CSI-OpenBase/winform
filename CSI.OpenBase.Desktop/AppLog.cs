@@ -23,7 +23,7 @@ internal sealed class AppLog : IDisposable
     {
         var logDirectory = Path.Combine(DesktopSettings.ApplicationDataDirectory, "logs");
         Directory.CreateDirectory(logDirectory);
-        var path = Path.Combine(logDirectory, $"desktop-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+        var path = Path.Combine(logDirectory, $"desktop-{BeijingTime.Now:yyyyMMdd-HHmmss}.log");
         var log = new AppLog(path);
         var applicationVersion = typeof(AppLog).Assembly.GetName().Version?.ToString(3) ?? "unknown";
         log.Write(
@@ -39,7 +39,7 @@ internal sealed class AppLog : IDisposable
             return;
         }
 
-        var line = $"{DateTimeOffset.Now:O} [{source}] {message.TrimEnd()}";
+        var line = $"{BeijingTime.Now:O} [{source}] {message.TrimEnd()}";
         lock (_sync)
         {
             _writer.WriteLine(line);

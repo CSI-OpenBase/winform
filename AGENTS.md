@@ -11,6 +11,8 @@ to the `csi-openbase` Python package from
 - Keep this repository independently cloneable; sibling backend source is an
   optional development input, not an aggregate-repository requirement.
 - Preserve authenticated loopback health checks and full process-tree cleanup.
+- Render desktop task and log timestamps in fixed Beijing time (`UTC+08:00`),
+  independent of the Windows system timezone; backend storage remains UTC.
 - Keep WebView messages source-checked against the active authenticated backend.
   Native directory pickers may return a user selection to the page, but path
   validation, persistence, and export behavior remain owned by the Python backend.
