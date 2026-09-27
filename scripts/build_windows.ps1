@@ -26,7 +26,7 @@ if ($versionText -notmatch $versionPattern) {
 }
 $releaseVersion = $Matches["version"]
 $releasesRoot = Join-Path $winformRoot "Release"
-$releaseDirectory = Join-Path $releasesRoot "winform.$releaseVersion"
+$releaseDirectory = Join-Path $releasesRoot $releaseVersion
 $outputRoot = Join-Path $releaseDirectory "portable"
 $installerOutput = Join-Path $releaseDirectory "installer"
 $portableArchive = Join-Path $releaseDirectory "CSI-OpenBase-$releaseVersion-win-x64-portable.zip"

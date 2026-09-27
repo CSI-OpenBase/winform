@@ -148,11 +148,11 @@ dependency closure because its bootloader and runtime enter the distribution.
 
 Artifacts are project-local:
 
-- `Release/winform.<version>/portable/` is the complete portable directory.
-- `Release/winform.<version>/portable/backend/` contains the frozen Python runtime.
-- `Release/winform.<version>/CSI-OpenBase-<version>-win-x64-portable.zip` is the
+- `Release/<version>/portable/` is the complete portable directory.
+- `Release/<version>/portable/backend/` contains the frozen Python runtime.
+- `Release/<version>/CSI-OpenBase-<version>-win-x64-portable.zip` is the
   distributable archive; the adjacent `.sha256` file verifies it.
-- `Release/winform.<version>/installer/` contains the Inno Setup installer when
+- `Release/<version>/installer/` contains the Inno Setup installer when
   it is enabled.
 
 Each build recreates only the directory for the current version and preserves
