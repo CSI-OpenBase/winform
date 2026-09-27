@@ -4,6 +4,10 @@
   <img src=".github/assets/csi-openbase-logo.svg" alt="CSI OpenBase" width="420">
 </p>
 
+<p align="center">
+  <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 This project is the Windows Forms and WebView2 host for CSI OpenBase. It owns the
 Windows UI, desktop settings, backend process lifetime, portable distribution, and
 installer. Creator authorization, collection, archiving, and the local web UI are
@@ -15,6 +19,27 @@ SSH clone: `git@github.com:CSI-OpenBase/winform.git`
 
 The Python backend is maintained separately in
 [CSI-OpenBase/local-web](https://github.com/CSI-OpenBase/local-web).
+
+## Interface Preview
+
+These screenshots use an isolated demonstration workspace and synthetic data to
+show the local management interface embedded in the WinForms application.
+
+### Local Archive Overview
+
+![CSI OpenBase local archive overview](.github/assets/screenshots/local-archive-overview.png)
+
+### Video Archive and Comment Collection
+
+![Video archive, comment counts, and incremental export actions](.github/assets/screenshots/video-archive.png)
+
+### Data Management
+
+![Clear platform exports, comments, or all local data by scope](.github/assets/screenshots/clear-data-dialog.png)
+
+### Settings
+
+![Configure the comment export directory](.github/assets/screenshots/settings.png)
 
 ## First Run
 
@@ -67,29 +92,29 @@ The configured interpreter is launched as `python -m scripts.run_openbase`.
 `CSI_OPENBASE_BACKEND` can instead point directly to a frozen backend executable;
 this explicit override takes precedence over packaged and source backends.
 
-## 构建模式约定
+## Build Modes
 
-### 本地测试：频繁编译
+### Local Testing: Frequent Builds
 
-日常修改 WinForm 界面或交互时，使用固定的本地测试构建入口：
+For routine WinForms UI and interaction work, use the fixed local build entry point:
 
 ```powershell
 .\scripts\build_local.ps1
 ```
 
-输出固定为：
+The output path is always:
 
 ```text
 D:\www\csi\csi-openbase\winform\Release\local\CSI.OpenBase.Desktop.exe
 ```
 
-编译完成后立即启动：
+To launch immediately after compilation:
 
 ```powershell
 .\scripts\build_local.ps1 -Run
 ```
 
-也可以复用已经冻结的后端：
+You can also reuse an existing frozen backend:
 
 ```powershell
 $version = (Get-Content .\VERSION -Raw).Trim()
@@ -98,17 +123,19 @@ $env:CSI_OPENBASE_BACKEND = `
 .\scripts\build_local.ps1 -Run
 ```
 
-本地测试不升级 `VERSION`，不执行 `build_windows.ps1`，不重新下载或复制
-Playwright Chromium，只清理并重建 `Release\local`，不会改动任何
-`Release\<version>` 目录。只有 Python 后端或其依赖发生变化时，才需要重新生成
-冻结后端。
+Local testing does not bump `VERSION`, run `build_windows.ps1`, or download or
+copy Playwright Chromium again. It only cleans and rebuilds `Release\local` and
+does not modify any `Release\<version>` directory. Regenerate the frozen backend
+only when the Python backend or its dependencies change.
 
-### 发布版本：完整构建
+### Release: Complete Build
 
-准备正式版本时先升级 `VERSION` 并完成测试，再执行 `build_windows.ps1`。完整流程会
-重建隔离的 Python 环境、冻结后端、安装并嵌入匹配的 Chromium、收集许可证，并按需
-生成 ZIP 和安装包。`-SkipArchive -SkipInstaller` 仅用于发布候选的本地完整编译，
-不作为日常 WinForm 测试命令。
+For a formal release, bump `VERSION`, complete the tests, and then run
+`build_windows.ps1`. The full workflow rebuilds an isolated Python environment,
+freezes the backend, installs and embeds the matching Chromium, gathers license
+materials, and optionally creates the ZIP archive and installer.
+`-SkipArchive -SkipInstaller` is only for a complete local release-candidate
+build, not routine WinForms testing.
 
 ## Versioning
 
@@ -175,7 +202,7 @@ When a separate `local-web` checkout is available as sibling `../python`, run:
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 -SkipInstaller
 ```
 
-只编译可运行目录、不生成 ZIP 和安装包：
+To build only the runnable directory without a ZIP archive or installer:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 `
@@ -216,8 +243,9 @@ Artifacts are project-local:
 - `Release/<version>/installer/` contains the Inno Setup installer when
   it is enabled.
 
-`-SkipArchive` 保留完整的 `portable/` 编译结果，但不生成 ZIP 和 SHA-256 文件；
-与 `-SkipInstaller` 一起使用即为仅本地编译模式。
+`-SkipArchive` retains the complete `portable/` build but does not create a ZIP
+or SHA-256 file. Use it together with `-SkipInstaller` for a local build-only
+release candidate.
 
 Each build recreates only the directory for the current version and preserves
 other version directories under `Release/`.
