@@ -150,6 +150,10 @@ The local page includes a Settings entry for an optional comment export director
 On Windows, its directory button uses the host's native folder picker through a
 source-checked WebView2 message. The Python backend validates and persists the
 selection; the host does not duplicate comment-export business logic.
+The same page provides incremental comment delivery and an explicit full resync.
+Incremental runs retain a complete validated snapshot locally while exporting only
+new or materially changed comments plus the relationship context needed to keep
+reply threads independently valid.
 
 On exit, the host first posts the token to `/api/shutdown`. If the endpoint or
 process does not respond in time, it terminates the complete backend process tree.
