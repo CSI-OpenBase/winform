@@ -39,16 +39,36 @@ class ReleaseContractTests(unittest.TestCase):
     def test_documentation_separates_local_testing_from_release_builds(self) -> None:
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        chinese_readme = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
 
         self.assertIn("## Build Modes", agents)
         self.assertIn("**Local testing**", agents)
         self.assertIn("**Release builds**", agents)
-        self.assertIn("## 构建模式约定", readme)
-        self.assertIn("### 本地测试：频繁编译", readme)
-        self.assertIn("### 发布版本：完整构建", readme)
+        self.assertIn("## Build Modes", readme)
+        self.assertIn("### Local Testing: Frequent Builds", readme)
+        self.assertIn("### Release: Complete Build", readme)
+        self.assertIn("## 构建模式", chinese_readme)
+        self.assertIn("### 本地测试：频繁编译", chinese_readme)
+        self.assertIn("### 发布版本：完整构建", chinese_readme)
         self.assertIn(".\\scripts\\build_local.ps1", readme)
         self.assertIn("Release\\local", readme)
         self.assertIn("build_windows.ps1", readme)
+
+    def test_about_dialog_uses_release_metadata(self) -> None:
+        source = (ROOT / "CSI.OpenBase.Desktop" / "AboutDialog.cs").read_text(
+            encoding="utf-8"
+        )
+        main_form = (ROOT / "CSI.OpenBase.Desktop" / "MainForm.cs").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("CSI OpenBase contributors", source)
+        self.assertIn("https://github.com/CSI-OpenBase/winform", source)
+        self.assertIn("AssemblyInformationalVersionAttribute", source)
+        self.assertIn("File.GetLastWriteTimeUtc", source)
+        self.assertIn("BeijingTime.Convert", source)
+        self.assertIn('CreateToolbarButton("关于"', main_form)
+        self.assertIn("new AboutDialog()", main_form)
 
     def test_local_build_has_a_fixed_non_release_output(self) -> None:
         script = ROOT / "scripts" / "build_local.ps1"

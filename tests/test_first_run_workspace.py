@@ -63,6 +63,17 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
             MAIN_FORM_SOURCE,
         )
 
+    def test_top_controls_share_a_single_toolbar(self) -> None:
+        self.assertIn("var toolbar = new ToolStrip", MAIN_FORM_SOURCE)
+        self.assertIn('CreateToolbarButton("目录设置"', MAIN_FORM_SOURCE)
+        self.assertIn('CreateToolbarButton("打开日志"', MAIN_FORM_SOURCE)
+        self.assertIn('CreateToolbarButton("任务"', MAIN_FORM_SOURCE)
+        self.assertIn('CreateToolbarButton("关于"', MAIN_FORM_SOURCE)
+        self.assertIn("toolbar.Items.AddRange", MAIN_FORM_SOURCE)
+        self.assertIn("UpdateWorkspaceToolbarState();", MAIN_FORM_SOURCE)
+        self.assertNotIn("_workspaceTextBox", MAIN_FORM_SOURCE)
+        self.assertNotIn("workspaceRow", MAIN_FORM_SOURCE)
+
     def test_workspace_state_is_rechecked_after_webview_initialization(self) -> None:
         webview_ready = "_webViewReady = true;"
         persisted_workspace_check = "if (!_settings.HasPersistedWorkspace)"

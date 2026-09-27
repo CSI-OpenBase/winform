@@ -138,12 +138,11 @@ internal sealed class MainForm : Form
     private readonly TableLayoutPanel _contentLayout;
     private readonly Panel _taskPanelHost;
     private readonly TaskPanelControl _taskPanel;
-    private readonly TextBox _workspaceTextBox;
     private readonly Label _statusLabel;
     private readonly ProgressBar _progressBar;
-    private readonly Button _browseButton;
-    private readonly AccessibleButton _tasksButton;
-    private readonly Button _restartButton;
+    private readonly ToolStripButton _browseButton;
+    private readonly ToolStripButton _tasksButton;
+    private readonly ToolStripButton _restartButton;
     private readonly System.Windows.Forms.Timer _backendMonitor;
     private bool _webViewReady;
     private bool _connected;
@@ -175,40 +174,37 @@ internal sealed class MainForm : Form
         Size = new Size(1180, 780);
         StartPosition = FormStartPosition.CenterScreen;
 
-        var header = new TableLayoutPanel
+        var toolbar = new ToolStrip
         {
+            AccessibleName = "主工具栏",
+            AutoSize = false,
             BackColor = Color.White,
-            ColumnCount = 2,
+            CanOverflow = false,
             Dock = DockStyle.Top,
-            Height = 105,
-            Padding = new Padding(20, 14, 20, 12),
+            GripStyle = ToolStripGripStyle.Hidden,
+            Height = 58,
+            LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow,
+            Padding = new Padding(20, 8, 20, 8),
+            RenderMode = ToolStripRenderMode.System,
+            ShowItemToolTips = true,
+            Stretch = true,
         };
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
-        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 39F));
 
-        var title = new Label
+        var title = new ToolStripLabel
         {
-            AutoSize = true,
+            Alignment = ToolStripItemAlignment.Left,
             Font = new Font("Segoe UI Semibold", 14F),
             ForeColor = TextColor,
-            Margin = new Padding(0, 2, 0, 0),
+            Margin = new Padding(0, 0, 12, 0),
             Text = "CSI OpenBase",
         };
-        header.Controls.Add(title, 0, 0);
-
-        var actions = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            Margin = new Padding(0),
-            WrapContents = false,
-        };
-        var logButton = CreateButton("打开日志", 82);
+        _browseButton = CreateToolbarButton("目录设置", 88);
+        _browseButton.AccessibleName = "设置工作目录";
+        _browseButton.Click += async (_, _) => await SelectWorkspaceAsync();
+        var logButton = CreateToolbarButton("打开日志", 82);
+        logButton.AccessibleName = "打开应用日志";
         logButton.Click += (_, _) => OpenLog();
-        _tasksButton = CreateButton("任务", 92);
+        _tasksButton = CreateToolbarButton("任务", 92);
         _tasksButton.AccessibleName = "显示或隐藏任务面板";
         _tasksButton.Click += async (_, _) =>
         {
@@ -219,47 +215,35 @@ internal sealed class MainForm : Form
                 _taskPanel.FocusContent();
             }
         };
-        _restartButton = CreateButton("重新启动", 82, primary: true);
+        var aboutButton = CreateToolbarButton("关于", 70);
+        aboutButton.AccessibleName = "关于 CSI OpenBase";
+        aboutButton.Click += (_, _) =>
+        {
+            using var dialog = new AboutDialog();
+            dialog.ShowDialog(this);
+        };
+        _restartButton = CreateToolbarButton("重新启动", 82, primary: true);
         _restartButton.Click += async (_, _) => await RestartBackendAsync();
-        actions.Controls.AddRange([logButton, _tasksButton, _restartButton]);
-        header.Controls.Add(actions, 1, 0);
-
-        var workspaceRow = new TableLayoutPanel
+        foreach (var item in new ToolStripItem[]
         {
-            ColumnCount = 3,
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0),
-        };
-        workspaceRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        workspaceRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        workspaceRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-        var workspaceLabel = new Label
+            _restartButton,
+            aboutButton,
+            _tasksButton,
+            logButton,
+            _browseButton,
+        })
         {
-            Anchor = AnchorStyles.Left,
-            AutoSize = true,
-            ForeColor = MutedTextColor,
-            Margin = new Padding(0, 0, 10, 0),
-            Text = "工作目录",
-        };
-        _workspaceTextBox = new TextBox
-        {
-            Anchor = AnchorStyles.Left | AnchorStyles.Right,
-            BackColor = Color.White,
-            ReadOnly = true,
-            Text = _settings.HasPersistedWorkspace ? _settings.WorkspaceDirectory : "尚未设置",
-        };
-        _browseButton = CreateButton("选择目录", 82);
-        _browseButton.Margin = new Padding(10, 3, 0, 3);
-        _browseButton.Click += async (_, _) =>
-        {
-            await SelectWorkspaceAsync();
-        };
-        workspaceRow.Controls.Add(workspaceLabel, 0, 0);
-        workspaceRow.Controls.Add(_workspaceTextBox, 1, 0);
-        workspaceRow.Controls.Add(_browseButton, 2, 0);
-        header.Controls.Add(workspaceRow, 0, 1);
-        header.SetColumnSpan(workspaceRow, 2);
+            item.Alignment = ToolStripItemAlignment.Right;
+        }
+        toolbar.Items.AddRange([
+            title,
+            _restartButton,
+            aboutButton,
+            _tasksButton,
+            logButton,
+            _browseButton,
+        ]);
+        UpdateWorkspaceToolbarState();
 
         var separator = new Panel
         {
@@ -304,7 +288,7 @@ internal sealed class MainForm : Form
         _taskPanel.CloseRequested += (_, _) =>
         {
             SetTaskPanelVisible(false);
-            _tasksButton.Focus();
+            _tasksButton.Select();
         };
         _taskPanel.ShowDisconnected("等待本地服务启动");
 
@@ -335,7 +319,7 @@ internal sealed class MainForm : Form
         Controls.Add(_contentLayout);
         Controls.Add(statusPanel);
         Controls.Add(separator);
-        Controls.Add(header);
+        Controls.Add(toolbar);
 
         _backendMonitor = new System.Windows.Forms.Timer { Interval = 2_000 };
         _backendMonitor.Tick += (_, _) =>
@@ -366,7 +350,7 @@ internal sealed class MainForm : Form
             if (eventArgs.KeyCode == Keys.Escape && _taskPanelVisible)
             {
                 SetTaskPanelVisible(false);
-                _tasksButton.Focus();
+                _tasksButton.Select();
                 eventArgs.Handled = true;
                 eventArgs.SuppressKeyPress = true;
             }
@@ -408,24 +392,22 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static AccessibleButton CreateButton(string text, int width, bool primary = false)
+    private static ToolStripButton CreateToolbarButton(
+        string text,
+        int width,
+        bool primary = false)
     {
-        return new AccessibleButton
+        return new ToolStripButton
         {
             AutoSize = false,
             BackColor = primary ? AccentColor : Color.White,
-            FlatStyle = FlatStyle.Flat,
+            DisplayStyle = ToolStripItemDisplayStyle.Text,
+            Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular),
             ForeColor = primary ? Color.White : TextColor,
-            Height = 30,
-            Margin = new Padding(8, 0, 0, 0),
+            Margin = new Padding(6, 2, 0, 2),
+            Size = new Size(width, 32),
             Text = text,
-            UseVisualStyleBackColor = false,
-            Width = width,
-            FlatAppearance =
-            {
-                BorderColor = primary ? AccentColor : BorderColor,
-                BorderSize = 1,
-            },
+            ToolTipText = text,
         };
     }
 
@@ -676,7 +658,7 @@ internal sealed class MainForm : Form
 
             _settings.WorkspaceDirectory = selectedPath;
             _settings.Save();
-            _workspaceTextBox.Text = selectedPath;
+            UpdateWorkspaceToolbarState();
             _log.Write("desktop", $"Data home changed to {selectedPath}");
             if (restartBackend)
             {
@@ -734,20 +716,28 @@ internal sealed class MainForm : Form
     {
         var count = _activeTaskCount > 99 ? "99+" : _activeTaskCount.ToString();
         _tasksButton.Text = _activeTaskCount > 0 ? $"任务 {count}" : "任务";
-        _tasksButton.BackColor = _taskPanelVisible
-            ? Color.FromArgb(234, 242, 252)
-            : Color.White;
-        _tasksButton.ForeColor = _taskPanelVisible ? AccentColor : TextColor;
-        _tasksButton.FlatAppearance.BorderColor = _taskPanelVisible
-            ? (_taskStateStale ? Color.FromArgb(207, 34, 46) : AccentColor)
-            : BorderColor;
+        _tasksButton.Checked = _taskPanelVisible;
+        _tasksButton.ForeColor = _taskStateStale
+            ? Color.FromArgb(207, 34, 46)
+            : (_taskPanelVisible ? AccentColor : TextColor);
         var accessibleName = _taskPanelVisible
             ? "隐藏任务面板"
             : "显示任务面板";
         var accessibleDescription = _activeTaskCount > 0
             ? $"{_activeTaskCount} 个任务正在进行{(_taskStateStale ? "，状态可能已过期" : "")}"
             : (_taskStateStale ? "任务状态暂不可用" : "没有正在进行的任务");
-        _tasksButton.UpdateAccessibleText(accessibleName, accessibleDescription);
+        _tasksButton.AccessibleName = accessibleName;
+        _tasksButton.AccessibleDescription = accessibleDescription;
+        _tasksButton.ToolTipText = $"{accessibleName} · {accessibleDescription}";
+    }
+
+    private void UpdateWorkspaceToolbarState()
+    {
+        var description = _settings.HasPersistedWorkspace
+            ? $"当前工作目录：{_settings.WorkspaceDirectory}。点击更改目录。"
+            : "尚未设置工作目录。点击选择保存用户数据的目录。";
+        _browseButton.AccessibleDescription = description;
+        _browseButton.ToolTipText = description;
     }
 
     private void PrepareTaskPanelForConnection()
@@ -977,31 +967,4 @@ internal sealed class MainForm : Form
         _progressBar.Style = isBusy ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks;
     }
 
-    private sealed class AccessibleButton : Button
-    {
-        public void UpdateAccessibleText(string name, string description)
-        {
-            var nameChanged = !string.Equals(AccessibleName, name, StringComparison.Ordinal);
-            var descriptionChanged = !string.Equals(
-                AccessibleDescription,
-                description,
-                StringComparison.Ordinal);
-            AccessibleName = name;
-            AccessibleDescription = description;
-            if (!IsHandleCreated)
-            {
-                return;
-            }
-
-            if (nameChanged)
-            {
-                AccessibilityNotifyClients(AccessibleEvents.NameChange, -1);
-            }
-
-            if (descriptionChanged)
-            {
-                AccessibilityNotifyClients(AccessibleEvents.DescriptionChange, -1);
-            }
-        }
-    }
 }

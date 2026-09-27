@@ -55,7 +55,10 @@ presented by the authenticated local page and follows the page's live task
 updates. The panel is read-only; task creation and execution remain owned by
 the Python backend and local web UI. Task times, refresh times, and desktop log
 timestamps are always displayed in Beijing time (`UTC+08:00`), regardless of
-the Windows system timezone.
+the Windows system timezone. A single top toolbar groups workspace settings,
+logs, tasks, About, and backend restart controls. The About dialog shows the
+project author, official GitHub repository, application version, and executable
+update date.
 
 ## Development
 
