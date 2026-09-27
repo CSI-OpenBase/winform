@@ -91,6 +91,12 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
         self.assertIn("IsCurrentBackendSource(eventArgs.Source)", MAIN_FORM_SOURCE)
         self.assertNotIn('new Uri(address, "api/state")', MAIN_FORM_SOURCE)
 
+    def test_comment_export_directory_uses_native_folder_picker(self) -> None:
+        self.assertIn('case "select-comment-export-directory":', MAIN_FORM_SOURCE)
+        self.assertIn('Description = "选择评论导出目录"', MAIN_FORM_SOURCE)
+        self.assertIn('type = "comment-export-directory-selected"', MAIN_FORM_SOURCE)
+        self.assertIn("PostWebMessageAsJson", MAIN_FORM_SOURCE)
+
     def test_task_panel_does_not_reload_or_poll_independently(self) -> None:
         self.assertNotIn("CoreWebView2.Reload()", MAIN_FORM_SOURCE)
         self.assertNotIn("__csiDesktopRefreshTasks", MAIN_FORM_SOURCE)

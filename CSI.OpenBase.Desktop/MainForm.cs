@@ -853,12 +853,45 @@ internal sealed class MainForm : Form
                 case "task-error":
                     MarkTaskPanelReadError();
                     break;
+                case "select-comment-export-directory":
+                    SelectCommentExportDirectory(root);
+                    break;
             }
         }
         catch (Exception exception)
         {
             MarkTaskPanelReadError(exception);
         }
+    }
+
+    private void SelectCommentExportDirectory(JsonElement message)
+    {
+        var current = message.TryGetProperty("current", out var currentElement) &&
+            currentElement.ValueKind == JsonValueKind.String
+            ? currentElement.GetString()
+            : null;
+        var initialDirectory = !string.IsNullOrWhiteSpace(current) && Directory.Exists(current)
+            ? Path.GetFullPath(current)
+            : _settings.WorkspaceDirectory;
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "选择评论导出目录",
+            InitialDirectory = initialDirectory,
+            ShowNewFolderButton = true,
+            UseDescriptionForTitle = true,
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        var selectedPath = Path.GetFullPath(dialog.SelectedPath);
+        _webView.CoreWebView2.PostWebMessageAsJson(
+            JsonSerializer.Serialize(new
+            {
+                type = "comment-export-directory-selected",
+                path = selectedPath,
+            }));
     }
 
     private bool IsCurrentBackendSource(string source)

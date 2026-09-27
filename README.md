@@ -144,6 +144,11 @@ authenticated local page. It does not add another task API polling loop. A backe
 restart or workspace change invalidates any in-flight task refresh before the new
 page state is shown.
 
+The local page includes a Settings entry for an optional comment export directory.
+On Windows, its directory button uses the host's native folder picker through a
+source-checked WebView2 message. The Python backend validates and persists the
+selection; the host does not duplicate comment-export business logic.
+
 On exit, the host first posts the token to `/api/shutdown`. If the endpoint or
 process does not respond in time, it terminates the complete backend process tree.
 User settings, logs, WebView2 state, and isolated creator browser sessions are kept

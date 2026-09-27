@@ -11,6 +11,9 @@ to the `csi-openbase` Python package from
 - Keep this repository independently cloneable; sibling backend source is an
   optional development input, not an aggregate-repository requirement.
 - Preserve authenticated loopback health checks and full process-tree cleanup.
+- Keep WebView messages source-checked against the active authenticated backend.
+  Native directory pickers may return a user selection to the page, but path
+  validation, persistence, and export behavior remain owned by the Python backend.
 - Keep source-checkout, wheel, and frozen-backend development paths working.
 - Keep all bundled legal files and dependency reports in release artifacts.
 - Treat the root `VERSION` file as the only application and release version source.
