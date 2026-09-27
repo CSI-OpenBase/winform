@@ -9,6 +9,7 @@ param(
     [string]$BootstrapPython = "python",
     [string]$Configuration = "Release",
     [switch]$SkipInstaller,
+    [switch]$SkipArchive,
     [switch]$PlanOnly
 )
 
@@ -52,6 +53,8 @@ if ($PlanOnly) {
         installerDirectory = $installerOutput
         portableArchive = $portableArchive
         portableChecksum = $portableChecksum
+        archiveEnabled = -not $SkipArchive
+        installerEnabled = -not $SkipInstaller
     } | ConvertTo-Json
     return
 }
@@ -314,14 +317,16 @@ $backendLicenseDirectory = Join-Path $distributionLicenses "backend"
     --include-package PyInstaller
 if ($LASTEXITCODE -ne 0) { throw "Python dependency license collection failed" }
 
-Compress-Archive -Path (Join-Path $outputRoot "*") -DestinationPath $portableArchive -CompressionLevel Optimal
-$sha256 = (Get-FileHash -LiteralPath $portableArchive -Algorithm SHA256).Hash.ToLowerInvariant()
-$checksumLine = "$sha256  $(Split-Path -Leaf $portableArchive)`r`n"
-[System.IO.File]::WriteAllText(
-    $portableChecksum,
-    $checksumLine,
-    [System.Text.UTF8Encoding]::new($false)
-)
+if (-not $SkipArchive) {
+    Compress-Archive -Path (Join-Path $outputRoot "*") -DestinationPath $portableArchive -CompressionLevel Optimal
+    $sha256 = (Get-FileHash -LiteralPath $portableArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    $checksumLine = "$sha256  $(Split-Path -Leaf $portableArchive)`r`n"
+    [System.IO.File]::WriteAllText(
+        $portableChecksum,
+        $checksumLine,
+        [System.Text.UTF8Encoding]::new($false)
+    )
+}
 
 if (-not $SkipInstaller) {
     New-Item -ItemType Directory -Path $installerOutput -Force | Out-Null
@@ -336,5 +341,9 @@ if (-not $SkipInstaller) {
 
 Write-Host "Windows release ready: $releaseDirectory"
 Write-Host "Portable directory: $outputRoot"
-Write-Host "Portable archive: $portableArchive"
-Write-Host "SHA-256: $sha256"
+if (-not $SkipArchive) {
+    Write-Host "Portable archive: $portableArchive"
+    Write-Host "SHA-256: $sha256"
+} else {
+    Write-Host "Portable archive skipped"
+}

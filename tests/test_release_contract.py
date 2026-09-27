@@ -36,6 +36,42 @@ def run_powershell(script: Path, *arguments: str) -> subprocess.CompletedProcess
 
 
 class ReleaseContractTests(unittest.TestCase):
+    def test_documentation_separates_local_testing_from_release_builds(self) -> None:
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Build Modes", agents)
+        self.assertIn("**Local testing**", agents)
+        self.assertIn("**Release builds**", agents)
+        self.assertIn("## 构建模式约定", readme)
+        self.assertIn("### 本地测试：频繁编译", readme)
+        self.assertIn("### 发布版本：完整构建", readme)
+        self.assertIn(".\\scripts\\build_local.ps1", readme)
+        self.assertIn("Release\\local", readme)
+        self.assertIn("build_windows.ps1", readme)
+
+    def test_local_build_has_a_fixed_non_release_output(self) -> None:
+        script = ROOT / "scripts" / "build_local.ps1"
+        result = run_powershell(script, "-PlanOnly")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan = json.loads(result.stdout)
+        expected_output = ROOT / "Release" / "local"
+        self.assertEqual(plan["mode"], "local-testing")
+        self.assertEqual(plan["configuration"], "Debug")
+        self.assertEqual(Path(plan["outputDirectory"]), expected_output)
+        self.assertEqual(
+            Path(plan["executable"]),
+            expected_output / "CSI.OpenBase.Desktop.exe",
+        )
+        self.assertFalse(plan["freezesBackend"])
+        self.assertFalse(plan["bundlesChromium"])
+        self.assertFalse(plan["bumpsVersion"])
+
+        source = script.read_text(encoding="utf-8")
+        self.assertNotIn("build_windows.ps1", source)
+        self.assertNotIn("playwright install", source.casefold())
+
     def test_version_file_uses_release_format(self) -> None:
         raw_version = (ROOT / "VERSION").read_bytes()
         self.assertRegex(raw_version, VERSION_FILE_PATTERN)
@@ -80,6 +116,19 @@ class ReleaseContractTests(unittest.TestCase):
             Path(plan["portableChecksum"]),
             release_directory / f"{archive_name}.sha256",
         )
+        self.assertTrue(plan["archiveEnabled"])
+        self.assertTrue(plan["installerEnabled"])
+
+        compile_only = run_powershell(
+            ROOT / "scripts" / "build_windows.ps1",
+            "-PlanOnly",
+            "-SkipArchive",
+            "-SkipInstaller",
+        )
+        self.assertEqual(compile_only.returncode, 0, compile_only.stderr)
+        compile_plan = json.loads(compile_only.stdout)
+        self.assertFalse(compile_plan["archiveEnabled"])
+        self.assertFalse(compile_plan["installerEnabled"])
 
     def test_version_increment_and_rollover(self) -> None:
         script = ROOT / "scripts" / "bump_version.ps1"
@@ -106,6 +155,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn('"--define=MyAppVersion=$releaseVersion"', build_script)
         self.assertIn('"--define=PortableSource=$outputRoot"', build_script)
         self.assertIn('"--output-dir=$installerOutput"', build_script)
+        self.assertIn("if (-not $SkipArchive)", build_script)
         self.assertNotIn("dist\\windows", build_script.lower())
         self.assertNotIn('#define MyAppVersion "', installer_script)
         self.assertIn('Source: "{#PortableSource}\\*"', installer_script)

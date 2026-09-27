@@ -65,6 +65,49 @@ The configured interpreter is launched as `python -m scripts.run_openbase`.
 `CSI_OPENBASE_BACKEND` can instead point directly to a frozen backend executable;
 this explicit override takes precedence over packaged and source backends.
 
+## 构建模式约定
+
+### 本地测试：频繁编译
+
+日常修改 WinForm 界面或交互时，使用固定的本地测试构建入口：
+
+```powershell
+.\scripts\build_local.ps1
+```
+
+输出固定为：
+
+```text
+D:\www\csi\csi-openbase\winform\Release\local\CSI.OpenBase.Desktop.exe
+```
+
+编译完成后立即启动：
+
+```powershell
+.\scripts\build_local.ps1 -Run
+```
+
+也可以复用已经冻结的后端：
+
+```powershell
+$version = (Get-Content .\VERSION -Raw).Trim()
+$env:CSI_OPENBASE_BACKEND = `
+  "$PWD\Release\$version\portable\backend\CSI.OpenBase.Backend.exe"
+.\scripts\build_local.ps1 -Run
+```
+
+本地测试不升级 `VERSION`，不执行 `build_windows.ps1`，不重新下载或复制
+Playwright Chromium，只清理并重建 `Release\local`，不会改动任何
+`Release\<version>` 目录。只有 Python 后端或其依赖发生变化时，才需要重新生成
+冻结后端。
+
+### 发布版本：完整构建
+
+准备正式版本时先升级 `VERSION` 并完成测试，再执行 `build_windows.ps1`。完整流程会
+重建隔离的 Python 环境、冻结后端、安装并嵌入匹配的 Chromium、收集许可证，并按需
+生成 ZIP 和安装包。`-SkipArchive -SkipInstaller` 仅用于发布候选的本地完整编译，
+不作为日常 WinForm 测试命令。
+
 ## Versioning
 
 The root `VERSION` file is the only source for the desktop application and release
@@ -121,6 +164,13 @@ When a separate `local-web` checkout is available as sibling `../python`, run:
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 -SkipInstaller
 ```
 
+只编译可运行目录、不生成 ZIP 和安装包：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 `
+  -PythonSource ..\python -SkipArchive -SkipInstaller
+```
+
 From a standalone `winform` checkout, clone `local-web` separately and pass its
 path with `-PythonSource`, or consume a published wheel with `-PythonWheel`.
 
@@ -154,6 +204,9 @@ Artifacts are project-local:
   distributable archive; the adjacent `.sha256` file verifies it.
 - `Release/<version>/installer/` contains the Inno Setup installer when
   it is enabled.
+
+`-SkipArchive` 保留完整的 `portable/` 编译结果，但不生成 ZIP 和 SHA-256 文件；
+与 `-SkipInstaller` 一起使用即为仅本地编译模式。
 
 Each build recreates only the directory for the current version and preserves
 other version directories under `Release/`.
