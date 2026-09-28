@@ -53,10 +53,11 @@ data, and the local index are stored there. The selected path is persisted for
 later launches and can be changed from the main window. Cancelling the initial
 picker leaves the backend stopped until a directory is selected.
 
-The Windows shell includes a collapsible task panel beside the local web UI. It
+The Windows shell includes an expanded-by-default, collapsible task panel beside the local web UI. It
 shows the current workspace's active count and recent task status already
 presented by the authenticated local page and follows the page's live task
-updates. The panel is read-only; task creation and execution remain owned by
+updates. Clicking a task with a video ID, or focusing it and pressing Enter or
+Space, opens that work on the correct archive page. The panel is read-only; task creation and execution remain owned by
 the Python backend and local web UI. Task times, refresh times, and desktop log
 timestamps are always displayed in Beijing time (`UTC+08:00`), regardless of
 the Windows system timezone. A single top toolbar groups workspace settings,

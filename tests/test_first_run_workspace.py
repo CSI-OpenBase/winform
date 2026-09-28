@@ -94,6 +94,7 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
         self.assertNotIn("var workspaceConfigured", MAIN_FORM_SOURCE)
 
     def test_task_panel_mirrors_the_authenticated_local_page(self) -> None:
+        self.assertIn("private bool _taskPanelVisible = true;", MAIN_FORM_SOURCE)
         self.assertIn(
             "AddScriptToExecuteOnDocumentCreatedAsync",
             MAIN_FORM_SOURCE,
@@ -112,6 +113,13 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
         )
         self.assertIn("IsCurrentBackendSource(eventArgs.Source)", MAIN_FORM_SOURCE)
         self.assertNotIn('new Uri(address, "api/state")', MAIN_FORM_SOURCE)
+
+    def test_video_tasks_open_the_corresponding_local_archive(self) -> None:
+        self.assertIn("event EventHandler<TaskVideoRequestedEventArgs>? VideoRequested", TASK_PANEL_SOURCE)
+        self.assertIn("Keys.Enter or Keys.Space", TASK_PANEL_SOURCE)
+        self.assertIn("AttachActivationOnClick(body)", TASK_PANEL_SOURCE)
+        self.assertIn("NavigateToVideo(eventArgs.VideoId)", MAIN_FORM_SOURCE)
+        self.assertIn('$"videos/{videoId}"', MAIN_FORM_SOURCE)
 
     def test_comment_export_directory_uses_native_folder_picker(self) -> None:
         self.assertIn('case "select-comment-export-directory":', MAIN_FORM_SOURCE)

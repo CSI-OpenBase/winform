@@ -295,6 +295,8 @@ internal sealed class MainForm : Form
             SetTaskPanelVisible(false);
             _tasksButton.Select();
         };
+        _taskPanel.VideoRequested += (_, eventArgs) =>
+            NavigateToVideo(eventArgs.VideoId);
         _taskPanel.ShowDisconnected("等待本地服务启动");
 
         _taskPanelHost = new Panel
@@ -702,6 +704,20 @@ internal sealed class MainForm : Form
         }
 
         UpdateTaskButtonAppearance();
+    }
+
+    private void NavigateToVideo(string videoId)
+    {
+        if (!_connected ||
+            !_webViewReady ||
+            _backendAddress is null ||
+            videoId.Length is < 8 or > 32 ||
+            videoId.Any(character => character is < '0' or > '9'))
+        {
+            return;
+        }
+
+        _webView.Source = new Uri(_backendAddress, $"videos/{videoId}");
     }
 
     private void ApplyTaskPanelWidth()

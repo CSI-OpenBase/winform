@@ -3,6 +3,11 @@ using System.Text;
 
 namespace CSI.OpenBase.Desktop;
 
+internal sealed class TaskVideoRequestedEventArgs(string videoId) : EventArgs
+{
+    public string VideoId { get; } = videoId;
+}
+
 internal sealed class TaskPanelControl : UserControl
 {
     private static readonly Color TextColor = Color.FromArgb(31, 35, 40);
@@ -147,6 +152,7 @@ internal sealed class TaskPanelControl : UserControl
     }
 
     public event EventHandler? CloseRequested;
+    public event EventHandler<TaskVideoRequestedEventArgs>? VideoRequested;
 
     public void FocusContent()
     {
@@ -336,7 +342,10 @@ internal sealed class TaskPanelControl : UserControl
                     _toolTip,
                     _taskTitleFont,
                     _taskMetadataFont,
-                    scaleFactor);
+                    scaleFactor,
+                    videoId => VideoRequested?.Invoke(
+                        this,
+                        new TaskVideoRequestedEventArgs(videoId)));
                 _taskList.Controls.Add(control);
             }
             else
@@ -443,6 +452,7 @@ internal sealed class TaskPanelControl : UserControl
         private readonly Label _messageLabel;
         private readonly Label _metadataLabel;
         private readonly float _initialScaleFactor;
+        private readonly Action<string> _openVideo;
         private BackendTaskItem _task;
 
         public TaskItemControl(
@@ -450,11 +460,13 @@ internal sealed class TaskPanelControl : UserControl
             ToolTip toolTip,
             Font titleFont,
             Font metadataFont,
-            float scaleFactor)
+            float scaleFactor,
+            Action<string> openVideo)
         {
             _task = task;
             _toolTip = toolTip;
             _initialScaleFactor = scaleFactor;
+            _openVideo = openVideo;
             SetStyle(ControlStyles.Selectable, true);
             AccessibleRole = AccessibleRole.ListItem;
             ColumnCount = 2;
@@ -531,7 +543,9 @@ internal sealed class TaskPanelControl : UserControl
             body.Controls.Add(_metadataLabel, 0, 2);
             Controls.Add(body, 0, 0);
             MouseDown += (_, _) => FocusItem();
+            Click += (_, _) => ActivateVideo();
             AttachFocusOnClick(body);
+            AttachActivationOnClick(body);
             UpdateTask(task);
         }
 
@@ -547,9 +561,10 @@ internal sealed class TaskPanelControl : UserControl
                 : task.Message;
             var metadata = Metadata(task);
 
+            var canOpenVideo = !string.IsNullOrWhiteSpace(task.VideoId);
             SetAccessibleText(
                 $"任务 {task.Id}，{kindLabel}，{statusLabel}",
-                $"{message}。{metadata}");
+                $"{message}。{metadata}{(canOpenVideo ? "。按 Enter 查看对应作品" : "")}");
             _titleLabel.Text = $"#{task.Id}  {kindLabel}";
             _statusLabel.Text = statusLabel;
             _statusLabel.BackColor = StatusBackColor(task.Status);
@@ -558,7 +573,10 @@ internal sealed class TaskPanelControl : UserControl
             _metadataLabel.Text = metadata;
             _toolTip.SetToolTip(_titleLabel, _titleLabel.Text);
             _toolTip.SetToolTip(_messageLabel, message);
-            _toolTip.SetToolTip(_metadataLabel, metadata);
+            _toolTip.SetToolTip(
+                _metadataLabel,
+                canOpenVideo ? $"{metadata} · 点击查看对应作品" : metadata);
+            Cursor = canOpenVideo ? Cursors.Hand : Cursors.Default;
             UpdateFrame();
         }
 
@@ -619,6 +637,13 @@ internal sealed class TaskPanelControl : UserControl
         protected override void OnKeyDown(KeyEventArgs eventArgs)
         {
             base.OnKeyDown(eventArgs);
+            if (eventArgs.KeyCode is Keys.Enter or Keys.Space && ActivateVideo())
+            {
+                eventArgs.Handled = true;
+                eventArgs.SuppressKeyPress = true;
+                return;
+            }
+
             var direction = eventArgs.KeyCode switch
             {
                 Keys.Up => -1,
@@ -641,7 +666,8 @@ internal sealed class TaskPanelControl : UserControl
         protected override bool IsInputKey(Keys keyData)
         {
             return (keyData & Keys.KeyCode) is
-                    Keys.Up or Keys.Down or Keys.PageUp or Keys.PageDown or Keys.Home or Keys.End ||
+                    Keys.Enter or Keys.Space or Keys.Up or Keys.Down or Keys.PageUp or
+                    Keys.PageDown or Keys.Home or Keys.End ||
                 base.IsInputKey(keyData);
         }
 
@@ -652,6 +678,26 @@ internal sealed class TaskPanelControl : UserControl
                 child.MouseDown += (_, _) => FocusItem();
                 AttachFocusOnClick(child);
             }
+        }
+
+        private void AttachActivationOnClick(Control parent)
+        {
+            foreach (Control child in parent.Controls)
+            {
+                child.Click += (_, _) => ActivateVideo();
+                AttachActivationOnClick(child);
+            }
+        }
+
+        private bool ActivateVideo()
+        {
+            if (string.IsNullOrWhiteSpace(_task.VideoId))
+            {
+                return false;
+            }
+
+            _openVideo(_task.VideoId);
+            return true;
         }
 
         private void FocusItem()
