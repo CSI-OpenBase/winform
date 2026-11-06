@@ -129,10 +129,10 @@ internal sealed class MainForm : Form
           };
         })()
         """;
-    private static readonly Color TextColor = Color.FromArgb(31, 35, 40);
-    private static readonly Color MutedTextColor = Color.FromArgb(87, 96, 106);
-    private static readonly Color BorderColor = Color.FromArgb(216, 222, 228);
-    private static readonly Color AccentColor = Color.FromArgb(9, 105, 218);
+    private static readonly Color TextColor = DesktopTheme.Ink;
+    private static readonly Color MutedTextColor = DesktopTheme.Muted;
+    private static readonly Color BorderColor = DesktopTheme.Ink;
+    private static readonly Color AccentColor = DesktopTheme.Blue;
 
     private readonly AppLog _log;
     private readonly DesktopSettings _settings;
@@ -169,7 +169,7 @@ internal sealed class MainForm : Form
         _taskPanel = new TaskPanelControl();
 
         Text = $"CSI OpenBase v{AboutDialog.ReadApplicationInfo().Version}";
-        BackColor = Color.White;
+        BackColor = DesktopTheme.Paper;
         ForeColor = TextColor;
         Font = new Font("Segoe UI", 9F);
         AutoScaleDimensions = new SizeF(96F, 96F);
@@ -182,11 +182,11 @@ internal sealed class MainForm : Form
         var menuStrip = new MenuStrip
         {
             AccessibleName = "主菜单",
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Paper,
             Dock = DockStyle.Top,
             ForeColor = TextColor,
             Padding = new Padding(12, 4, 12, 4),
-            RenderMode = ToolStripRenderMode.System,
+            Renderer = DesktopTheme.CreateMenuRenderer(),
             ShowItemToolTips = true,
         };
         var settingsMenu = new ToolStripMenuItem("设置");
@@ -242,12 +242,12 @@ internal sealed class MainForm : Form
         {
             BackColor = BorderColor,
             Dock = DockStyle.Top,
-            Height = 1,
+            Height = 2,
         };
 
         var statusPanel = new TableLayoutPanel
         {
-            BackColor = Color.FromArgb(246, 248, 250),
+            BackColor = DesktopTheme.Paper,
             ColumnCount = 2,
             Dock = DockStyle.Top,
             Height = 38,
@@ -274,7 +274,7 @@ internal sealed class MainForm : Form
         _webView = new WebView2
         {
             AllowExternalDrop = false,
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Surface,
             Dock = DockStyle.Fill,
         };
 
@@ -293,13 +293,13 @@ internal sealed class MainForm : Form
             BackColor = BorderColor,
             Dock = DockStyle.Fill,
             Margin = new Padding(0),
-            Padding = new Padding(1, 0, 0, 0),
+            Padding = new Padding(2, 0, 0, 0),
         };
         _taskPanelHost.Controls.Add(_taskPanel);
 
         _contentLayout = new TableLayoutPanel
         {
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Paper,
             ColumnCount = 2,
             Dock = DockStyle.Fill,
             Margin = new Padding(0),

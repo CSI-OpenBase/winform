@@ -8,16 +8,15 @@ internal sealed class AboutDialog : Form
     internal const string Author = "CSI OpenBase contributors";
     internal const string GitHubUrl = "https://github.com/CSI-OpenBase/winform";
 
-    private static readonly Color TextColor = Color.FromArgb(31, 35, 40);
-    private static readonly Color MutedTextColor = Color.FromArgb(87, 96, 106);
-    private static readonly Color BorderColor = Color.FromArgb(216, 222, 228);
-    private static readonly Color AccentColor = Color.FromArgb(9, 105, 218);
+    private static readonly Color TextColor = DesktopTheme.Ink;
+    private static readonly Color MutedTextColor = DesktopTheme.Muted;
+    private static readonly Color AccentColor = DesktopTheme.Blue;
 
     public AboutDialog()
     {
         Text = "关于 CSI OpenBase";
         AccessibleName = "关于 CSI OpenBase";
-        BackColor = Color.White;
+        BackColor = DesktopTheme.Paper;
         ForeColor = TextColor;
         Font = new Font("Segoe UI", 9F);
         AutoScaleDimensions = new SizeF(96F, 96F);
@@ -44,6 +43,7 @@ internal sealed class AboutDialog : Form
         var heading = new TableLayoutPanel
         {
             AutoSize = true,
+            BackColor = DesktopTheme.Yellow,
             ColumnCount = 1,
             Dock = DockStyle.Top,
             Margin = new Padding(0, 0, 0, 22),
@@ -82,18 +82,18 @@ internal sealed class AboutDialog : Form
         var closeButton = new Button
         {
             Anchor = AnchorStyles.Right,
-            BackColor = AccentColor,
+            BackColor = DesktopTheme.Yellow,
             DialogResult = DialogResult.OK,
             FlatStyle = FlatStyle.Flat,
-            ForeColor = Color.White,
+            ForeColor = TextColor,
             Height = 32,
             Margin = new Padding(0, 18, 0, 0),
             Text = "关闭",
             UseVisualStyleBackColor = false,
             Width = 88,
         };
-        closeButton.FlatAppearance.BorderColor = AccentColor;
-        closeButton.FlatAppearance.BorderSize = 1;
+        closeButton.FlatAppearance.BorderColor = TextColor;
+        closeButton.FlatAppearance.BorderSize = 2;
         layout.Controls.Add(closeButton, 0, 2);
 
         AcceptButton = closeButton;

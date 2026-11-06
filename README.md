@@ -72,6 +72,10 @@ application version from `VERSION`. The About dialog shows the
 project author, official GitHub repository, application version, and executable
 update date.
 
+The Pop / Creator's Desk visual style uses cream paper, yellow, coral, and
+cobalt blue with bold borders and offset shadows. Native menus, the task panel,
+and About share this palette; the Python upstream owns the embedded page styles.
+
 ## Development
 
 Requirements:

@@ -10,10 +10,10 @@ internal sealed class TaskVideoRequestedEventArgs(string videoId) : EventArgs
 
 internal sealed class TaskPanelControl : UserControl
 {
-    private static readonly Color TextColor = Color.FromArgb(31, 35, 40);
-    private static readonly Color MutedTextColor = Color.FromArgb(87, 96, 106);
-    private static readonly Color BorderColor = Color.FromArgb(216, 222, 228);
-    private static readonly Color PanelColor = Color.FromArgb(246, 248, 250);
+    private static readonly Color TextColor = DesktopTheme.Ink;
+    private static readonly Color MutedTextColor = DesktopTheme.Muted;
+    private static readonly Color BorderColor = DesktopTheme.Ink;
+    private static readonly Color PanelColor = DesktopTheme.Paper;
     private readonly Font _headerTitleFont = new("Segoe UI Semibold", 11F);
     private readonly Font _closeButtonFont = new("Segoe UI", 14F);
     private readonly Font _taskTitleFont = new("Segoe UI Semibold", 9F);
@@ -52,7 +52,7 @@ internal sealed class TaskPanelControl : UserControl
 
         var header = new TableLayoutPanel
         {
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Yellow,
             ColumnCount = 2,
             Dock = DockStyle.Fill,
             Margin = new Padding(0),
@@ -127,7 +127,7 @@ internal sealed class TaskPanelControl : UserControl
 
         var footer = new TableLayoutPanel
         {
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Lilac,
             ColumnCount = 1,
             Dock = DockStyle.Fill,
             Margin = new Padding(0),
@@ -270,7 +270,7 @@ internal sealed class TaskPanelControl : UserControl
         return new Button
         {
             AutoSize = false,
-            BackColor = Color.White,
+            BackColor = DesktopTheme.Surface,
             FlatStyle = FlatStyle.Flat,
             ForeColor = TextColor,
             Height = 30,
@@ -281,7 +281,7 @@ internal sealed class TaskPanelControl : UserControl
             FlatAppearance =
             {
                 BorderColor = BorderColor,
-                BorderSize = 1,
+                BorderSize = 2,
             },
         };
     }
@@ -445,7 +445,7 @@ internal sealed class TaskPanelControl : UserControl
 
     private sealed class TaskItemControl : TableLayoutPanel
     {
-        private static readonly Color ActiveColor = Color.FromArgb(9, 105, 218);
+        private static readonly Color ActiveColor = DesktopTheme.Blue;
         private readonly ToolTip _toolTip;
         private readonly Label _titleLabel;
         private readonly Label _statusLabel;
@@ -481,7 +481,7 @@ internal sealed class TaskPanelControl : UserControl
 
             var body = new TableLayoutPanel
             {
-                BackColor = Color.White,
+                BackColor = DesktopTheme.Surface,
                 ColumnCount = 1,
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0),
@@ -495,7 +495,7 @@ internal sealed class TaskPanelControl : UserControl
 
             var heading = new TableLayoutPanel
             {
-                BackColor = Color.White,
+                BackColor = DesktopTheme.Surface,
                 ColumnCount = 2,
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0),
@@ -534,7 +534,7 @@ internal sealed class TaskPanelControl : UserControl
                 AutoEllipsis = true,
                 Dock = DockStyle.Fill,
                 Font = metadataFont,
-                ForeColor = Color.FromArgb(106, 115, 125),
+                ForeColor = MutedTextColor,
                 Margin = new Padding(0, Scale(2), 0, 0),
                 UseMnemonic = false,
             };
@@ -609,7 +609,7 @@ internal sealed class TaskPanelControl : UserControl
                 return;
             }
 
-            using var borderPen = new Pen(BorderColor, Scale(1));
+            using var borderPen = new Pen(BorderColor, Scale(2));
             eventArgs.Graphics.DrawRectangle(
                 borderPen,
                 0,
@@ -753,8 +753,8 @@ internal sealed class TaskPanelControl : UserControl
         private void UpdateFrame()
         {
             BackColor = Focused
-                ? SystemColors.Highlight
-                : Color.White;
+                ? DesktopTheme.Blue
+                : DesktopTheme.Ink;
             Padding = new Padding(Scale(3));
             Invalidate();
         }
@@ -861,11 +861,11 @@ internal sealed class TaskPanelControl : UserControl
         {
             return status switch
             {
-                "running" or "queued" => Color.FromArgb(226, 239, 250),
-                "succeeded" => Color.FromArgb(223, 244, 233),
-                "partial" or "blocked" or "interrupted" => Color.FromArgb(255, 240, 213),
-                "failed" => Color.FromArgb(251, 227, 224),
-                _ => Color.FromArgb(232, 235, 237),
+                "running" or "queued" => DesktopTheme.Lilac,
+                "succeeded" => Color.FromArgb(232, 237, 255),
+                "partial" or "blocked" or "interrupted" => DesktopTheme.Yellow,
+                "failed" => Color.FromArgb(255, 226, 219),
+                _ => DesktopTheme.Paper,
             };
         }
 
@@ -873,10 +873,10 @@ internal sealed class TaskPanelControl : UserControl
         {
             return status switch
             {
-                "running" or "queued" => Color.FromArgb(34, 91, 143),
-                "succeeded" => Color.FromArgb(21, 94, 70),
-                "partial" or "blocked" or "interrupted" => Color.FromArgb(128, 82, 16),
-                "failed" => Color.FromArgb(141, 46, 39),
+                "running" or "queued" => Color.FromArgb(64, 48, 114),
+                "succeeded" => Color.FromArgb(41, 68, 156),
+                "partial" or "blocked" or "interrupted" => Color.FromArgb(112, 80, 13),
+                "failed" => DesktopTheme.Danger,
                 _ => MutedTextColor,
             };
         }
