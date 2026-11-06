@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SETTINGS_SOURCE = (
-    PROJECT_ROOT / "CSI.OpenBase.Desktop" / "DesktopSettings.cs"
-).read_text(encoding="utf-8")
 MAIN_FORM_SOURCE = (
     PROJECT_ROOT / "CSI.OpenBase.Desktop" / "MainForm.cs"
 ).read_text(encoding="utf-8")
@@ -26,72 +25,40 @@ PROJECT_SOURCE = (
 
 
 class FirstRunWorkspaceContractTests(unittest.TestCase):
-    def test_settings_distinguish_a_suggestion_from_a_saved_workspace(self) -> None:
+    def test_startup_only_opens_the_folder_picker_on_user_request(self) -> None:
+        startup = MAIN_FORM_SOURCE.split(
+            "private async Task InitializeAndStartAsync()", 1
+        )[1].split("private async Task<bool> SelectWorkspaceAsync()", 1)[0]
+        self.assertNotIn("SelectWorkspaceAsync(", startup)
+        self.assertNotIn("ShowDialog(", startup)
+        self.assertIn("await RestartBackendAsync();", startup)
         self.assertIn(
-            "internal bool HasPersistedWorkspace { get; private set; }",
-            SETTINGS_SOURCE,
-        )
-        self.assertGreaterEqual(
-            SETTINGS_SOURCE.count("HasPersistedWorkspace = true;"),
-            2,
+            "_browseMenuItem.Click += async (_, _) => await SelectWorkspaceAsync();",
+            MAIN_FORM_SOURCE,
         )
 
-    def test_first_launch_prompts_before_starting_the_backend(self) -> None:
-        prompt = "await SelectWorkspaceAsync(restartBackend: false)"
-        webview_initialization = "await CreateWebViewEnvironmentAsync"
-        self.assertIn(prompt, MAIN_FORM_SOURCE)
+    def test_workspace_is_initialized_before_starting_the_backend(self) -> None:
+        restart = MAIN_FORM_SOURCE.split("private async Task RestartBackendAsync()", 1)[1]
         self.assertLess(
-            MAIN_FORM_SOURCE.index(prompt),
-            MAIN_FORM_SOURCE.index(webview_initialization),
+            restart.index("_settings.EnsureWorkspace();"),
+            restart.index("await _backend.StartAsync("),
         )
+        self.assertIn('ResetTaskPanel("工作目录不可用");', restart)
         self.assertIn(
-            "if (!_settings.HasPersistedWorkspace)",
+            "_restartMenuItem.Enabled = enabled && _settings.HasPersistedWorkspace;",
             MAIN_FORM_SOURCE,
         )
 
-    def test_restart_stays_disabled_until_a_workspace_is_saved(self) -> None:
-        self.assertIn(
-            "_restartButton.Enabled = enabled && _settings.HasPersistedWorkspace;",
-            MAIN_FORM_SOURCE,
-        )
-        self.assertIn(
-            "await SelectWorkspaceAsync(restartBackend: false);",
-            MAIN_FORM_SOURCE,
-        )
-        self.assertIn(
-            "if (!_settings.HasPersistedWorkspace)",
-            MAIN_FORM_SOURCE,
-        )
-
-    def test_top_controls_share_a_single_toolbar(self) -> None:
-        self.assertIn("var toolbar = new ToolStrip", MAIN_FORM_SOURCE)
-        self.assertIn('CreateToolbarButton("目录设置"', MAIN_FORM_SOURCE)
-        self.assertIn('CreateToolbarButton("打开日志"', MAIN_FORM_SOURCE)
-        self.assertIn('CreateToolbarButton("任务"', MAIN_FORM_SOURCE)
-        self.assertIn('CreateToolbarButton("关于"', MAIN_FORM_SOURCE)
-        self.assertIn("toolbar.Items.AddRange", MAIN_FORM_SOURCE)
-        self.assertIn("UpdateWorkspaceToolbarState();", MAIN_FORM_SOURCE)
+    def test_top_controls_share_the_main_menu(self) -> None:
+        self.assertIn("var menuStrip = new MenuStrip", MAIN_FORM_SOURCE)
+        self.assertIn('new ToolStripMenuItem("目录设置")', MAIN_FORM_SOURCE)
+        self.assertIn('new ToolStripMenuItem("运行日志")', MAIN_FORM_SOURCE)
+        self.assertIn('new ToolStripMenuItem("任务")', MAIN_FORM_SOURCE)
+        self.assertIn('new ToolStripMenuItem("关于")', MAIN_FORM_SOURCE)
+        self.assertIn("MainMenuStrip = menuStrip;", MAIN_FORM_SOURCE)
+        self.assertIn("UpdateWorkspaceMenuState();", MAIN_FORM_SOURCE)
         self.assertNotIn("_workspaceTextBox", MAIN_FORM_SOURCE)
         self.assertNotIn("workspaceRow", MAIN_FORM_SOURCE)
-
-    def test_workspace_state_is_rechecked_after_webview_initialization(self) -> None:
-        webview_ready = "_webViewReady = true;"
-        persisted_workspace_check = "if (!_settings.HasPersistedWorkspace)"
-        ready_index = MAIN_FORM_SOURCE.index(webview_ready)
-        post_ready_check_index = MAIN_FORM_SOURCE.find(
-            persisted_workspace_check,
-            ready_index,
-        )
-        backend_start_index = MAIN_FORM_SOURCE.find(
-            "await RestartBackendAsync();",
-            ready_index,
-        )
-        self.assertNotEqual(post_ready_check_index, -1)
-        self.assertLess(
-            post_ready_check_index,
-            backend_start_index,
-        )
-        self.assertNotIn("var workspaceConfigured", MAIN_FORM_SOURCE)
 
     def test_task_panel_mirrors_the_authenticated_local_page(self) -> None:
         self.assertIn("private bool _taskPanelVisible = true;", MAIN_FORM_SOURCE)
@@ -170,6 +137,53 @@ class FirstRunWorkspaceContractTests(unittest.TestCase):
         self.assertIn("BeijingTime.Convert(parsed)", TASK_PANEL_SOURCE)
         self.assertNotIn("ToLocalTime()", TASK_PANEL_SOURCE)
         self.assertGreaterEqual(APP_LOG_SOURCE.count("BeijingTime.Now"), 2)
+
+
+class DesktopSettingsBehaviorTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.artifacts = tempfile.TemporaryDirectory(prefix="openbase-settings-tests-")
+        cls.addClassCleanup(cls.artifacts.cleanup)
+        built = subprocess.run(
+            [
+                "dotnet", "build",
+                str(PROJECT_ROOT / "tests" / "SettingsHarness" / "SettingsHarness.csproj"),
+                "--artifacts-path", cls.artifacts.name,
+                "-c", "Release", "--nologo",
+            ],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=120,
+        )
+        if built.returncode:
+            raise AssertionError(built.stdout + built.stderr)
+        cls.harness = (
+            Path(cls.artifacts.name) / "bin" / "SettingsHarness" / "release"
+            / "SettingsHarness.dll"
+        )
+
+    def check_scenario(self, scenario: str) -> None:
+        with tempfile.TemporaryDirectory(prefix="openbase-workspace-") as workspace:
+            result = subprocess.run(
+                ["dotnet", str(self.harness), scenario, workspace],
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unsaved_workspace_is_created_persisted_and_reused(self) -> None:
+        self.check_scenario("first-run")
+
+    def test_saved_workspace_and_existing_data_are_preserved(self) -> None:
+        self.check_scenario("saved-workspace")
+
+    def test_user_can_change_workspace_without_moving_old_data(self) -> None:
+        self.check_scenario("change-workspace")
+
+    def test_unavailable_workspace_does_not_save_a_bad_default(self) -> None:
+        self.check_scenario("unavailable-workspace")
+
+    def test_invalid_settings_recover_in_the_same_settings_file(self) -> None:
+        self.check_scenario("invalid-settings")
 
 
 if __name__ == "__main__":

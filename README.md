@@ -47,11 +47,16 @@ show the local management interface embedded in the WinForms application.
 
 ## First Run
 
-On first launch, the desktop host requires the user to choose a work directory
-before it starts the local backend. Exported tables, video archives, comment
-data, and the local index are stored there. The selected path is persisted for
-later launches and can be changed from the main window. Cancelling the initial
-picker leaves the backend stopped until a directory is selected.
+On first launch, the desktop host automatically creates and saves a work
+directory at `CSI OpenBase` inside the user's Windows Documents folder, then
+starts the local backend without opening a folder picker. If Documents is
+unavailable, it uses `%LOCALAPPDATA%\CSI OpenBase\data`. Exported tables, video
+archives, comment data, and the local index are stored there. Existing saved
+work directories remain selected. Use **设置 → 目录设置** in the top menu to change
+the directory; cancelling the picker keeps the current selection. Switching
+directories does not move data from the previous location. If a directory
+cannot be initialized, the main window shows an error and lets the user select
+another directory.
 
 The Windows shell includes an expanded-by-default, collapsible task panel beside the local web UI. It
 shows the current workspace's active count and recent task status already
@@ -60,8 +65,10 @@ updates. Clicking a task with a video ID, or focusing it and pressing Enter or
 Space, opens that work on the correct archive page. The panel is read-only; task creation and execution remain owned by
 the Python backend and local web UI. Task times, refresh times, and desktop log
 timestamps are always displayed in Beijing time (`UTC+08:00`), regardless of
-the Windows system timezone. A single top toolbar groups workspace settings,
-logs, tasks, About, and backend restart controls. The About dialog shows the
+the Windows system timezone. The top menu has **设置**, **操作**, and **关于**:
+workspace selection is under **设置**, while **操作** contains runtime logs,
+the task-panel toggle, and backend restart. The window title includes the
+application version from `VERSION`. The About dialog shows the
 project author, official GitHub repository, application version, and executable
 update date.
 

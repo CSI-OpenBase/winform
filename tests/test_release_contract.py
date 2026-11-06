@@ -67,7 +67,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("AssemblyInformationalVersionAttribute", source)
         self.assertIn("File.GetLastWriteTimeUtc", source)
         self.assertIn("BeijingTime.Convert", source)
-        self.assertIn('CreateToolbarButton("关于"', main_form)
+        self.assertIn('new ToolStripMenuItem("关于")', main_form)
         self.assertIn("new AboutDialog()", main_form)
 
     def test_local_build_has_a_fixed_non_release_output(self) -> None:

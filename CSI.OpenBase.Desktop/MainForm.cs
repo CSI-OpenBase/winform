@@ -145,9 +145,9 @@ internal sealed class MainForm : Form
     private readonly TaskPanelControl _taskPanel;
     private readonly Label _statusLabel;
     private readonly ProgressBar _progressBar;
-    private readonly ToolStripButton _browseButton;
-    private readonly ToolStripButton _tasksButton;
-    private readonly ToolStripButton _restartButton;
+    private readonly ToolStripMenuItem _browseMenuItem;
+    private readonly ToolStripMenuItem _tasksMenuItem;
+    private readonly ToolStripMenuItem _restartMenuItem;
     private readonly System.Windows.Forms.Timer _backendMonitor;
     private bool _webViewReady;
     private bool _connected;
@@ -168,7 +168,7 @@ internal sealed class MainForm : Form
         _backend = new BackendLauncher(log);
         _taskPanel = new TaskPanelControl();
 
-        Text = "CSI OpenBase";
+        Text = $"CSI OpenBase v{AboutDialog.ReadApplicationInfo().Version}";
         BackColor = Color.White;
         ForeColor = TextColor;
         Font = new Font("Segoe UI", 9F);
@@ -179,39 +179,35 @@ internal sealed class MainForm : Form
         Size = new Size(1180, 780);
         StartPosition = FormStartPosition.CenterScreen;
 
-        var toolbar = new ToolStrip
+        var menuStrip = new MenuStrip
         {
-            AccessibleName = "主工具栏",
-            AutoSize = false,
+            AccessibleName = "主菜单",
             BackColor = Color.White,
-            CanOverflow = false,
             Dock = DockStyle.Top,
-            GripStyle = ToolStripGripStyle.Hidden,
-            Height = 58,
-            LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow,
-            Padding = new Padding(20, 8, 20, 8),
+            ForeColor = TextColor,
+            Padding = new Padding(12, 4, 12, 4),
             RenderMode = ToolStripRenderMode.System,
             ShowItemToolTips = true,
-            Stretch = true,
         };
-
-        var title = new ToolStripLabel
+        var settingsMenu = new ToolStripMenuItem("设置");
+        _browseMenuItem = new ToolStripMenuItem("目录设置")
         {
-            Alignment = ToolStripItemAlignment.Left,
-            Font = new Font("Segoe UI Semibold", 14F),
-            ForeColor = TextColor,
-            Margin = new Padding(0, 0, 12, 0),
-            Text = "CSI OpenBase",
+            AccessibleName = "设置工作目录",
         };
-        _browseButton = CreateToolbarButton("目录设置", 88);
-        _browseButton.AccessibleName = "设置工作目录";
-        _browseButton.Click += async (_, _) => await SelectWorkspaceAsync();
-        var logButton = CreateToolbarButton("打开日志", 82);
-        logButton.AccessibleName = "打开应用日志";
-        logButton.Click += (_, _) => OpenLog();
-        _tasksButton = CreateToolbarButton("任务", 92);
-        _tasksButton.AccessibleName = "显示或隐藏任务面板";
-        _tasksButton.Click += async (_, _) =>
+        _browseMenuItem.Click += async (_, _) => await SelectWorkspaceAsync();
+        settingsMenu.DropDownItems.Add(_browseMenuItem);
+
+        var operationsMenu = new ToolStripMenuItem("操作");
+        var logMenuItem = new ToolStripMenuItem("运行日志")
+        {
+            AccessibleName = "打开应用日志",
+        };
+        logMenuItem.Click += (_, _) => OpenLog();
+        _tasksMenuItem = new ToolStripMenuItem("任务")
+        {
+            AccessibleName = "显示或隐藏任务面板",
+        };
+        _tasksMenuItem.Click += async (_, _) =>
         {
             SetTaskPanelVisible(!_taskPanelVisible);
             if (_taskPanelVisible)
@@ -220,35 +216,27 @@ internal sealed class MainForm : Form
                 _taskPanel.FocusContent();
             }
         };
-        var aboutButton = CreateToolbarButton("关于", 70);
-        aboutButton.AccessibleName = "关于 CSI OpenBase";
-        aboutButton.Click += (_, _) =>
+        _restartMenuItem = new ToolStripMenuItem("重新启动");
+        _restartMenuItem.Click += async (_, _) => await RestartBackendAsync();
+        operationsMenu.DropDownItems.AddRange([
+            logMenuItem,
+            _tasksMenuItem,
+            new ToolStripSeparator(),
+            _restartMenuItem,
+        ]);
+
+        var aboutMenuItem = new ToolStripMenuItem("关于")
+        {
+            AccessibleName = "关于 CSI OpenBase",
+        };
+        aboutMenuItem.Click += (_, _) =>
         {
             using var dialog = new AboutDialog();
             dialog.ShowDialog(this);
         };
-        _restartButton = CreateToolbarButton("重新启动", 82, primary: true);
-        _restartButton.Click += async (_, _) => await RestartBackendAsync();
-        foreach (var item in new ToolStripItem[]
-        {
-            _restartButton,
-            aboutButton,
-            _tasksButton,
-            logButton,
-            _browseButton,
-        })
-        {
-            item.Alignment = ToolStripItemAlignment.Right;
-        }
-        toolbar.Items.AddRange([
-            title,
-            _restartButton,
-            aboutButton,
-            _tasksButton,
-            logButton,
-            _browseButton,
-        ]);
-        UpdateWorkspaceToolbarState();
+        menuStrip.Items.AddRange([settingsMenu, operationsMenu, aboutMenuItem]);
+        MainMenuStrip = menuStrip;
+        UpdateWorkspaceMenuState();
 
         var separator = new Panel
         {
@@ -293,7 +281,8 @@ internal sealed class MainForm : Form
         _taskPanel.CloseRequested += (_, _) =>
         {
             SetTaskPanelVisible(false);
-            _tasksButton.Select();
+            menuStrip.Focus();
+            operationsMenu.Select();
         };
         _taskPanel.VideoRequested += (_, eventArgs) =>
             NavigateToVideo(eventArgs.VideoId);
@@ -326,7 +315,7 @@ internal sealed class MainForm : Form
         Controls.Add(_contentLayout);
         Controls.Add(statusPanel);
         Controls.Add(separator);
-        Controls.Add(toolbar);
+        Controls.Add(menuStrip);
 
         _backendMonitor = new System.Windows.Forms.Timer { Interval = 2_000 };
         _backendMonitor.Tick += (_, _) =>
@@ -344,8 +333,8 @@ internal sealed class MainForm : Form
             }
         };
         _backendMonitor.Start();
-        _restartButton.Enabled = _settings.HasPersistedWorkspace;
-        UpdateTaskButtonAppearance();
+        _restartMenuItem.Enabled = _settings.HasPersistedWorkspace;
+        UpdateTaskMenuAppearance();
 
         Shown += async (_, _) =>
         {
@@ -357,7 +346,8 @@ internal sealed class MainForm : Form
             if (eventArgs.KeyCode == Keys.Escape && _taskPanelVisible)
             {
                 SetTaskPanelVisible(false);
-                _tasksButton.Select();
+                menuStrip.Focus();
+                operationsMenu.Select();
                 eventArgs.Handled = true;
                 eventArgs.SuppressKeyPress = true;
             }
@@ -399,33 +389,8 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static ToolStripButton CreateToolbarButton(
-        string text,
-        int width,
-        bool primary = false)
-    {
-        return new ToolStripButton
-        {
-            AutoSize = false,
-            BackColor = primary ? AccentColor : Color.White,
-            DisplayStyle = ToolStripItemDisplayStyle.Text,
-            Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular),
-            ForeColor = primary ? Color.White : TextColor,
-            Margin = new Padding(6, 2, 0, 2),
-            Size = new Size(width, 32),
-            Text = text,
-            ToolTipText = text,
-        };
-    }
-
     private async Task InitializeAndStartAsync()
     {
-        if (!_settings.HasPersistedWorkspace)
-        {
-            SetStatus("首次使用，请先选择工作目录。", isBusy: false);
-            await SelectWorkspaceAsync(restartBackend: false);
-        }
-
         try
         {
             SetStatus("正在初始化网页组件...", isBusy: true);
@@ -450,7 +415,7 @@ internal sealed class MainForm : Form
                 {
                     _taskStateStale = true;
                     _taskPanel.ShowError("当前页面未能加载");
-                    UpdateTaskButtonAppearance();
+                    UpdateTaskMenuAppearance();
                     return;
                 }
 
@@ -475,16 +440,6 @@ internal sealed class MainForm : Form
                 "无法初始化 WebView2。请安装或修复 Microsoft Edge WebView2 Runtime，然后重新启动。",
                 isBusy: false,
                 isError: true);
-            return;
-        }
-
-        if (!_settings.HasPersistedWorkspace)
-        {
-            SetControlsEnabled(true);
-            ResetTaskPanel("请选择工作目录后启动本地服务");
-            SetStatus(
-                "尚未设置工作目录。请选择目录后再启动本地服务。",
-                isBusy: false);
             return;
         }
 
@@ -545,16 +500,6 @@ internal sealed class MainForm : Form
             return;
         }
 
-        if (!_settings.HasPersistedWorkspace)
-        {
-            SetControlsEnabled(true);
-            ResetTaskPanel("请选择工作目录后启动本地服务");
-            SetStatus(
-                "尚未设置工作目录。请选择目录后再启动本地服务。",
-                isBusy: false);
-            return;
-        }
-
         await _restartLock.WaitAsync();
         try
         {
@@ -567,6 +512,22 @@ internal sealed class MainForm : Form
             _backendAddress = null;
             PrepareTaskPanelForConnection();
             SetControlsEnabled(false);
+            try
+            {
+                _settings.EnsureWorkspace();
+                UpdateWorkspaceMenuState();
+            }
+            catch (Exception exception)
+            {
+                _log.Write("desktop", $"Workspace initialization failed: {exception}");
+                ResetTaskPanel("工作目录不可用");
+                SetStatus(
+                    $"无法初始化工作目录，请通过“目录设置”更换目录：{exception.Message}",
+                    isBusy: false,
+                    isError: true);
+                return;
+            }
+
             BackendLaunchPlan plan;
             try
             {
@@ -627,17 +588,14 @@ internal sealed class MainForm : Form
         }
     }
 
-    private async Task<bool> SelectWorkspaceAsync(bool restartBackend = true)
+    private async Task<bool> SelectWorkspaceAsync()
     {
-        var requiresInitialSetup = !_settings.HasPersistedWorkspace;
         var initialDirectory = Directory.Exists(_settings.WorkspaceDirectory)
             ? _settings.WorkspaceDirectory
             : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         using var dialog = new FolderBrowserDialog
         {
-            Description = requiresInitialSetup
-                ? "首次使用：选择保存用户数据的工作目录"
-                : "选择 CSI OpenBase 工作目录",
+            Description = "选择 CSI OpenBase 工作目录",
             InitialDirectory = initialDirectory,
             ShowNewFolderButton = true,
             UseDescriptionForTitle = true,
@@ -645,13 +603,6 @@ internal sealed class MainForm : Form
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
-            if (requiresInitialSetup)
-            {
-                SetStatus(
-                    "尚未设置工作目录。请选择目录后再启动本地服务。",
-                    isBusy: false);
-            }
-
             return false;
         }
 
@@ -665,12 +616,9 @@ internal sealed class MainForm : Form
 
             _settings.WorkspaceDirectory = selectedPath;
             _settings.Save();
-            UpdateWorkspaceToolbarState();
+            UpdateWorkspaceMenuState();
             _log.Write("desktop", $"Data home changed to {selectedPath}");
-            if (restartBackend)
-            {
-                await RestartBackendAsync();
-            }
+            await RestartBackendAsync();
 
             return true;
         }
@@ -703,7 +651,7 @@ internal sealed class MainForm : Form
             _contentLayout.ResumeLayout(performLayout: true);
         }
 
-        UpdateTaskButtonAppearance();
+        UpdateTaskMenuAppearance();
     }
 
     private void NavigateToVideo(string videoId)
@@ -733,12 +681,12 @@ internal sealed class MainForm : Form
         return TaskPanelWidth * Math.Max(DeviceDpi, 96) / 96F;
     }
 
-    private void UpdateTaskButtonAppearance()
+    private void UpdateTaskMenuAppearance()
     {
         var count = _activeTaskCount > 99 ? "99+" : _activeTaskCount.ToString();
-        _tasksButton.Text = _activeTaskCount > 0 ? $"任务 {count}" : "任务";
-        _tasksButton.Checked = _taskPanelVisible;
-        _tasksButton.ForeColor = _taskStateStale
+        _tasksMenuItem.Text = _activeTaskCount > 0 ? $"任务 {count}" : "任务";
+        _tasksMenuItem.Checked = _taskPanelVisible;
+        _tasksMenuItem.ForeColor = _taskStateStale
             ? Color.FromArgb(207, 34, 46)
             : (_taskPanelVisible ? AccentColor : TextColor);
         var accessibleName = _taskPanelVisible
@@ -747,18 +695,16 @@ internal sealed class MainForm : Form
         var accessibleDescription = _activeTaskCount > 0
             ? $"{_activeTaskCount} 个任务正在进行{(_taskStateStale ? "，状态可能已过期" : "")}"
             : (_taskStateStale ? "任务状态暂不可用" : "没有正在进行的任务");
-        _tasksButton.AccessibleName = accessibleName;
-        _tasksButton.AccessibleDescription = accessibleDescription;
-        _tasksButton.ToolTipText = $"{accessibleName} · {accessibleDescription}";
+        _tasksMenuItem.AccessibleName = accessibleName;
+        _tasksMenuItem.AccessibleDescription = accessibleDescription;
+        _tasksMenuItem.ToolTipText = $"{accessibleName} · {accessibleDescription}";
     }
 
-    private void UpdateWorkspaceToolbarState()
+    private void UpdateWorkspaceMenuState()
     {
-        var description = _settings.HasPersistedWorkspace
-            ? $"当前工作目录：{_settings.WorkspaceDirectory}。点击更改目录。"
-            : "尚未设置工作目录。点击选择保存用户数据的目录。";
-        _browseButton.AccessibleDescription = description;
-        _browseButton.ToolTipText = description;
+        var description = $"当前工作目录：{_settings.WorkspaceDirectory}。点击更改目录。";
+        _browseMenuItem.AccessibleDescription = description;
+        _browseMenuItem.ToolTipText = description;
     }
 
     private void PrepareTaskPanelForConnection()
@@ -769,7 +715,7 @@ internal sealed class MainForm : Form
         _taskReadErrorLogged = false;
         _taskStateStale = false;
         _taskPanel.ShowLoading("正在连接本地服务...");
-        UpdateTaskButtonAppearance();
+        UpdateTaskMenuAppearance();
     }
 
     private void ResetTaskPanel(string message)
@@ -780,7 +726,7 @@ internal sealed class MainForm : Form
         _taskReadErrorLogged = false;
         _taskStateStale = false;
         _taskPanel.ShowDisconnected(message);
-        UpdateTaskButtonAppearance();
+        UpdateTaskMenuAppearance();
     }
 
     private async Task RefreshTaskPanelFromDocumentAsync()
@@ -930,7 +876,7 @@ internal sealed class MainForm : Form
         _taskReadErrorLogged = false;
         _taskStateStale = false;
         _taskPanel.SetState(state);
-        UpdateTaskButtonAppearance();
+        UpdateTaskMenuAppearance();
     }
 
     private void MarkTaskPanelReadError(Exception? exception = null)
@@ -944,7 +890,7 @@ internal sealed class MainForm : Form
 
         _taskStateStale = true;
         _taskPanel.ShowError("无法读取最新任务状态");
-        UpdateTaskButtonAppearance();
+        UpdateTaskMenuAppearance();
     }
 
     private void OpenLog()
@@ -971,8 +917,8 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _browseButton.Enabled = enabled;
-        _restartButton.Enabled = enabled && _settings.HasPersistedWorkspace;
+        _browseMenuItem.Enabled = enabled;
+        _restartMenuItem.Enabled = enabled && _settings.HasPersistedWorkspace;
     }
 
     private void SetStatus(string message, bool isBusy, bool isError = false)

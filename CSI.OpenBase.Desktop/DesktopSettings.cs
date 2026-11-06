@@ -15,20 +15,28 @@ internal sealed class DesktopSettings
 
     private static string SettingsPath => Path.Combine(ApplicationDataDirectory, "desktop.json");
 
+    private string _settingsPath = SettingsPath;
+
     public string WorkspaceDirectory { get; set; } = DefaultWorkspaceDirectory();
 
     internal bool HasPersistedWorkspace { get; private set; }
 
     public static DesktopSettings Load(AppLog log)
     {
+        return Load(log, SettingsPath);
+    }
+
+    internal static DesktopSettings Load(AppLog log, string settingsPath)
+    {
+        settingsPath = Path.GetFullPath(settingsPath);
         try
         {
-            if (!File.Exists(SettingsPath))
+            if (!File.Exists(settingsPath))
             {
-                return new DesktopSettings();
+                return new DesktopSettings { _settingsPath = settingsPath };
             }
 
-            var json = File.ReadAllText(SettingsPath);
+            var json = File.ReadAllText(settingsPath);
             var settings = JsonSerializer.Deserialize<DesktopSettings>(json, JsonOptions);
             if (settings is null || string.IsNullOrWhiteSpace(settings.WorkspaceDirectory))
             {
@@ -36,24 +44,34 @@ internal sealed class DesktopSettings
             }
 
             settings.WorkspaceDirectory = Path.GetFullPath(settings.WorkspaceDirectory);
+            settings._settingsPath = settingsPath;
             settings.HasPersistedWorkspace = true;
             return settings;
         }
         catch (Exception exception)
         {
             log.Write("desktop", $"Could not load settings; defaults will be used: {exception.Message}");
-            return new DesktopSettings();
+            return new DesktopSettings { _settingsPath = settingsPath };
+        }
+    }
+
+    public void EnsureWorkspace()
+    {
+        Directory.CreateDirectory(WorkspaceDirectory);
+        if (!HasPersistedWorkspace)
+        {
+            Save();
         }
     }
 
     public void Save()
     {
-        Directory.CreateDirectory(ApplicationDataDirectory);
+        Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
         WorkspaceDirectory = Path.GetFullPath(WorkspaceDirectory);
 
-        var temporaryPath = SettingsPath + ".tmp";
+        var temporaryPath = _settingsPath + ".tmp";
         File.WriteAllText(temporaryPath, JsonSerializer.Serialize(this, JsonOptions));
-        File.Move(temporaryPath, SettingsPath, overwrite: true);
+        File.Move(temporaryPath, _settingsPath, overwrite: true);
         HasPersistedWorkspace = true;
     }
 
